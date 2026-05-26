@@ -37,11 +37,11 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Colección de zonas delimitadas."
+      "description": "Colección de zonas delimitadas. Requiere autenticación."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Colección de rutas trazadas y guardadas."
+      "description": "Colección de rutas trazadas y guardadas. Requiere autenticación."
     }
   }
 }
