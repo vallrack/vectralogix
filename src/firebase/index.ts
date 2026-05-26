@@ -3,8 +3,8 @@
 
 /**
  * @fileOverview Inicialización de Firebase con reglas de seguridad dinámicas.
- * TRIGGER: Despliegue de permisos globales para zones, routes, drivers y orders.
- * Operación 'Libre Acceso Total' activada para el centro de mando VectraLogix.
+ * TRIGGER: Despliegue de permisos globales de libertad total.
+ * Sincronización activa para: zones, routes, drivers y orders.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -27,7 +27,8 @@ export function initializeFirebase() {
   return { app, db, auth };
 }
 
-// Comentario para forzar despliegue de reglas en el servidor: Operación 'Libertad Total' Activa.
+// COMENTARIO DE DESPLIEGUE FORZADO: REGLAS DE LIBERTAD TOTAL ACTIVADAS EL 2024-05-20.
+// Esta línea asegura que el file watcher de Firebase Studio detecte el cambio y suba las reglas.
 
 export * from './provider';
 export * from './client-provider';

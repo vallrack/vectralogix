@@ -1,8 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Motor de geocodificación resiliente con el 'Ejército de IA'.
- * Implementa una cascada de modelos (Flash 2.5 -> Flash 1.5 -> Pro) para asegurar la localización.
+ * @fileOverview Motor de geocodificación de alta disponibilidad con Ejército de IA.
  */
 
 import {ai} from '@/ai/genkit';
@@ -40,14 +39,14 @@ const geocodePrompt = ai.definePrompt({
   Consulta: {{{query}}}
   
   Instrucciones:
-  1. Identifica el lugar más probable en Colombia (especialmente en el área de Bello, Antioquia).
+  1. Identifica el lugar más probable en Colombia.
   2. Maneja direcciones exactas y barrios.
   3. Provee Latitud y Longitud precisas.
-  4. Sugiere zoom: 19 para dirección exacta, 16 para barrios, 12 para ciudades.`,
+  4. Sugiere zoom táctico.`,
 });
 
 export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeResponse> {
-  // Ejército de IA: Intentamos con múltiples modelos para garantizar la respuesta
+  // Ejército de IA: Intentamos con todos los modelos disponibles en cascada
   const models = [
     'googleai/gemini-2.5-flash',
     'googleai/gemini-1.5-flash',
@@ -64,10 +63,9 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
       if (output) return { success: true, data: output };
     } catch (error: any) {
       lastError = error;
-      console.warn(`Ejército de IA: Modelo ${model} no disponible, reintentando con reserva...`);
+      console.warn(`EJÉRCITO DE IA: Modelo ${model} no disponible, saltando al siguiente nivel de reserva...`);
       
-      // Si es un error de API Key (leaked/403), continuamos al siguiente modelo
-      if (error.message?.includes('leaked') || error.status === 403 || error.message?.includes('403')) {
+      if (error.status === 403 || error.message?.includes('403') || error.message?.includes('leaked')) {
         continue;
       }
     }
@@ -75,7 +73,7 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
 
   return { 
     success: false, 
-    error: 'El ejército de IA ha agotado sus reservas de potencia o las llaves están bloqueadas.',
-    isApiKeyError: lastError?.status === 403 || lastError?.message?.includes('leaked') || lastError?.message?.includes('403')
+    error: 'El ejército de IA ha agotado sus reservas de potencia.',
+    isApiKeyError: lastError?.status === 403 || lastError?.message?.includes('403') || lastError?.message?.includes('leaked')
   };
 }

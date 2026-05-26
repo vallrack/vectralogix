@@ -67,19 +67,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
+      "description": "PERMISO MAESTRO: Cualquier usuario autenticado puede leer y escribir sin restricciones."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
+      "description": "PERMISO MAESTRO: Cualquier usuario autenticado puede leer y escribir sin restricciones."
     },
     "/drivers/{driverId}": {
       "schema": "#/backend/entities/Driver",
-      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
+      "description": "PERMISO MAESTRO: Cualquier usuario autenticado puede leer y escribir sin restricciones."
     },
     "/orders/{orderId}": {
       "schema": "#/backend/entities/Order",
-      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
+      "description": "PERMISO MAESTRO: Cualquier usuario autenticado puede leer y escribir sin restricciones."
     }
   }
 }
