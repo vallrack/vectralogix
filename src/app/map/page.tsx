@@ -127,7 +127,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Proyección inversa simplificada
+    // Proyección inversa simplificada para capturar clics
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -289,7 +289,7 @@ export default function SpatialHub() {
                         onChange={(e) => setNewZoneName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch(newZoneName)}
                       />
-                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 cursor-pointer" onClick={() => handleGlobalSearch(newZoneName)} />
                     </div>
                   </div>
                   
@@ -452,9 +452,12 @@ export default function SpatialHub() {
       </aside>
       
       <main ref={mapContainerRef} className="flex-1 relative bg-slate-100 overflow-hidden">
-        {/* Capa táctica activa solo en modo dibujo */}
+        {/* Capa táctica activa solo en modo dibujo para capturar clics */}
         {isDrawing && (
-          <div className="absolute inset-0 z-40 cursor-crosshair bg-transparent" onClick={handleMapClick} />
+          <div 
+            className="absolute inset-0 z-40 cursor-crosshair bg-transparent" 
+            onClick={handleMapClick} 
+          />
         )}
         
         <VectorMap 
