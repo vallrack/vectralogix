@@ -67,7 +67,7 @@ const optimizedDeliveryRouteGenerationFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      // Primary attempt with Gemini 2.5 Flash
+      // Intentamos con Gemini 2.5 Flash
       const { output } = await optimizeRoutePrompt(input, {
         model: 'googleai/gemini-2.5-flash',
       });
@@ -75,7 +75,7 @@ const optimizedDeliveryRouteGenerationFlow = ai.defineFlow(
     } catch (error) {
       console.error('Gemini primary route optimization failed, falling back to Pro model...', error);
       try {
-        // Fallback attempt with Gemini 1.5 Pro
+        // Fallback a Gemini 1.5 Pro
         const { output } = await optimizeRoutePrompt(input, {
           model: 'googleai/gemini-1.5-pro',
         });

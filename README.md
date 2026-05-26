@@ -1,14 +1,15 @@
+
 # VectraLogix | Intelligent Logistics Hub
 
 Este es el centro de mando operativo de VectraLogix, diseñado para la gestión inteligente de flotas, trazado de rutas estratégicas y análisis cartográfico de alta resolución en tiempo real.
 
 ## Características Principales
 
-- **Spatial Hub**: Cartografía táctica con trazado de nodos y perímetros geográficos.
-- **Snapshots Tácticos**: Captura de zonas con niveles de zoom específicos para exploración urbana.
-- **Inteligencia de Rutas**: Generación de secuencias optimizadas mediante IA (Genkit).
-- **Gestión de Flota**: Control detallado de unidades y operadores.
-- **Seguridad**: Autenticación integrada con Firebase (Google & Email).
+- **Spatial Hub**: Cartografía táctica con trazado de nodos y perímetros geográficos con precisión de píxel.
+- **Snapshots Tácticos**: Captura de zonas con niveles de zoom específicos (hasta 21x) para exploración urbana detallada.
+- **Inteligencia de Rutas**: Generación de secuencias optimizadas mediante IA redundante (Gemini Flash & Pro).
+- **Gestión de Flota**: Control detallado de unidades y operadores en tiempo real.
+- **Seguridad**: Autenticación integrada con Firebase (Google & Email/Password).
 
 ## Instrucciones para GitHub
 
@@ -23,9 +24,9 @@ git remote add origin https://github.com/vallrack/vectralogix.git
 git push -u origin main
 ```
 
-## Despliegue en Firebase
+## Despliegue
 
-Una vez vinculado a GitHub, puedes conectar este repositorio a **Firebase App Hosting** para habilitar despliegues automáticos y vincular tu dominio personalizado. No olvides añadir tu dominio en la consola de Firebase > Authentication > Settings > Dominios autorizados.
+Una vez vinculado a GitHub, puedes conectar este repositorio a **Firebase App Hosting** para habilitar despliegues automáticos. Recuerda autorizar tu dominio en la consola de Firebase > Authentication > Settings > Authorized domains.
 
 ---
 Desarrollado con Next.js, Genkit y Firebase.

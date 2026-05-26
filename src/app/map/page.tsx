@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -122,6 +123,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Proyección inversa para obtener lat/lng exactos basados en el zoom actual
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -167,6 +169,7 @@ export default function SpatialHub() {
           title: "Zona Registrada", 
           description: "Perímetro guardado con snapshot de alta resolución." 
         });
+        // Realizamos el zoom automático post-guardado
         setMapZoom(19); 
         setNewZoneName('');
       })
