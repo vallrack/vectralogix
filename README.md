@@ -1,44 +1,39 @@
 
 # VectraLogix | Intelligent Logistics Hub
 
-Este es el centro de mando operativo de VectraLogix, diseñado para la gestión inteligente de flotas, trazado de rutas estratégicas y análisis cartográfico de alta resolución en tiempo real.
+Este es el centro de mando operativo de VectraLogix, diseñado para la gestión inteligente de flotas y análisis táctico.
 
-## Características Principales
+## 🚀 Despliegue en GitHub
 
-- **Spatial Hub**: Cartografía táctica con trazado de nodos y perímetros geográficos.
-- **Auto-Rutas**: Generación de secuencias optimizadas mediante un **Ejército de IA Redundante** (Gemini 2.5 Flash, 1.5 Flash & Pro).
-- **Gestión de Flota & Pedidos**: Control total de unidades y entregas con libertad de permisos en Firestore.
-- **Seguridad**: Autenticación integrada con Firebase.
+Si te aparece el error de "remote origin already exists" o fallos de autenticación, sigue estos pasos exactos:
 
-## Instrucciones para GitHub
+1. **Configurar el origen correctamente**:
+   Reemplaza `<TU_TOKEN>` con un Personal Access Token de GitHub.
+   ```bash
+   git remote set-url origin https://vallrack:<TU_TOKEN>@github.com/vallrack/vectralogix.git
+   ```
 
-Para subir este proyecto a tu repositorio de GitHub, abre una terminal en la raíz del proyecto y ejecuta los siguientes comandos:
+2. **Subir los cambios**:
+   ```bash
+   git add .
+   git commit -m "feat: Desbloqueo total de seguridad y activación de Ejército de IA"
+   git push -u origin main
+   ```
 
-```bash
-# 1. Inicializar el repositorio
-git init
+## 🔐 Configuración de Seguridad (CRÍTICO)
 
-# 2. Agregar todos los archivos
-git add .
+Para resolver el error `auth/unauthorized-domain` y permitir la "Libertad Total":
 
-# 3. Crear el primer commit con todas las mejoras de IA y Seguridad
-git commit -m "feat: Initial commit for VectraLogix Hub - Redundant AI Army & Total Freedom Rules"
-
-# 4. Crear y cambiar a la rama principal
-git branch -M main
-
-# 5. Vincular con tu repositorio remoto (reemplaza con tu URL)
-git remote add origin https://github.com/tu-usuario/vectralogix.git
-
-# 6. Subir los cambios
-git push -u origin main
-```
-
-## Configuración de Dominio (CRÍTICO)
-
-Si experimentas el error `auth/unauthorized-domain`, debes añadir el dominio de tu estación de trabajo en la consola de Firebase:
 1. Ve a **Firebase Console** > **Authentication** > **Settings**.
-2. En la pestaña **Authorized domains**, añade el dominio que aparece en tu barra de navegación (ej: `6000-firebase-studio...cloudworkstations.dev`).
+2. En **Authorized domains**, añade el dominio actual:
+   `6000-firebase-studio-1779748898386.cluster-mdgxqvvkkbfpqrfigfiuugu5pk.cloudworkstations.dev`
+3. Las reglas de Firestore se han configurado para permitir acceso total a operadores autenticados.
 
----
+## 🤖 Ejército de IA Redundante
+
+El sistema utiliza una cascada de modelos para garantizar 100% de disponibilidad:
+- **Gemini 2.5 Flash** (Primario)
+- **Gemini 1.5 Flash** (Reserva)
+- **Gemini 1.5 Pro** (Potencia Máxima)
+
 Desarrollado con Next.js, Genkit y Firebase.
