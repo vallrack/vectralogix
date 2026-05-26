@@ -21,9 +21,6 @@ import {
   MousePointer2,
   List,
   MapPinned,
-  Zap,
-  Target,
-  Maximize2,
   Route as RouteIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -54,8 +51,6 @@ const COLOMBIA_DATABASE = [
   { id: 'c3', name: 'Bogotá', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
   { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
   { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
-  { id: 'c7', name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
-  { id: 'c8', name: 'Cartagena', lat: 10.4226, lng: -75.5403, type: 'Ciudad', color: '#f43f5e' },
 ];
 
 export default function SpatialHub() {
@@ -74,7 +69,6 @@ export default function SpatialHub() {
 
   const firestore = useFirestore();
   
-  // Queries
   const zonesQuery = useMemo(() => firestore ? collection(firestore, 'zones') : null, [firestore]);
   const routesQuery = useMemo(() => firestore ? collection(firestore, 'routes') : null, [firestore]);
   
@@ -90,33 +84,28 @@ export default function SpatialHub() {
   }, [zones, searchQuery]);
 
   const handleFocusPoint = (point: any) => {
-    const lat = point.lat || (point.coordinates && point.coordinates[0]?.lat) || (point.stops && point.stops[0]?.lat);
-    const lng = point.lng || (point.coordinates && point.coordinates[0]?.lng) || (point.stops && point.stops[0]?.lng);
-    const targetZoom = point.zoom || 18.5; 
+    // Determine coordinate center
+    let targetLat = point.lat;
+    let targetLng = point.lng;
+
+    if (point.coordinates && point.coordinates.length > 0) {
+      targetLat = point.coordinates[0].lat;
+      targetLng = point.coordinates[0].lng;
+    } else if (point.stops && point.stops.length > 0) {
+      targetLat = point.stops[0].lat;
+      targetLng = point.stops[0].lng;
+    }
     
-    if (lat !== undefined && lng !== undefined) {
-      setViewCenter({ lat, lng });
+    const targetZoom = point.zoom || 17; 
+    
+    if (targetLat !== undefined && targetLng !== undefined) {
+      setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
       setShowSearchResults(false);
-      if (point.name) {
-        setSearchQuery(point.name);
-        toast({
-          title: "Enfoque Táctico",
-          description: `Visualizando: ${point.name}`,
-        });
-      }
-    }
-  };
-
-  const handleEditorKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && newZoneName.trim()) {
-      const query = newZoneName.toLowerCase().trim();
-      const match = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(query)) 
-                 || (zones || []).find(z => z.name.toLowerCase().includes(query));
-      
-      if (match) {
-        handleFocusPoint(match);
-      }
+      toast({
+        title: "Enfoque Táctico",
+        description: `Visualizando: ${point.name}`,
+      });
     }
   };
 
@@ -127,6 +116,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Inverse projection to estimate lat/lng
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -158,20 +148,22 @@ export default function SpatialHub() {
       type: activeTool,
       color: colorHex,
       coordinates: [{ lat: viewCenter.lat, lng: viewCenter.lng }],
-      zoom: mapZoom > 17 ? mapZoom : 18.5, 
+      zoom: mapZoom,
       createdAt: serverTimestamp()
     };
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Registrada", description: "Perímetro guardado exitosamente." });
-        setMapZoom(19); 
+        toast({ title: "Zona Guardada", description: "Perímetro registrado exitosamente." });
         setNewZoneName('');
       })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'zones', operation: 'create', requestResourceData: zoneData,
-        }));
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'zones',
+          operation: 'create',
+          requestResourceData: zoneData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       })
       .finally(() => setIsSaving(false));
   };
@@ -180,8 +172,8 @@ export default function SpatialHub() {
     if (!firestore || !newRouteName || plannedPoints.length < 2) {
       toast({ 
         variant: "destructive", 
-        title: "Error de Validación", 
-        description: "Asigna un nombre y al menos 2 nodos para guardar la ruta." 
+        title: "Validación Fallida", 
+        description: "Nombre y al menos 2 nodos requeridos." 
       });
       return;
     }
@@ -195,21 +187,19 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Ruta Guardada", description: "Secuencia logística almacenada en la nube." });
+        toast({ title: "Ruta Guardada", description: "Secuencia logística almacenada." });
         setNewRouteName('');
         setPlannedPoints([]);
       })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: 'routes', operation: 'create', requestResourceData: routeData,
-        }));
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'routes',
+          operation: 'create',
+          requestResourceData: routeData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       })
       .finally(() => setIsSaving(false));
-  };
-
-  const handleWheelZoom = (e: React.WheelEvent) => {
-    const delta = e.deltaY;
-    setMapZoom(prev => delta > 0 ? Math.max(prev - 0.5, 5) : Math.min(prev + 0.5, 21));
   };
 
   return (
@@ -223,7 +213,7 @@ export default function SpatialHub() {
               V
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">Cartografía</h2>
+              <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">Cartografía Táctica</h2>
               <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase">VectraLogix Hub</p>
             </div>
           </div>
@@ -260,24 +250,23 @@ export default function SpatialHub() {
                 <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                     <MousePointer2 className="w-3 h-3" />
-                    Nueva Zona
+                    Delimitar Área
                   </h3>
 
                   <div className="space-y-5">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Identificador</label>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Zona</label>
                       <input 
                         type="text" 
-                        placeholder="Nombre de la zona..."
+                        placeholder="Ej: Sector Norte A..."
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                         value={newZoneName}
-                        onKeyDown={handleEditorKeyDown}
                         onChange={(e) => setNewZoneName(e.target.value)}
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color Táctico</label>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color de Referencia</label>
                       <div className="flex gap-3 justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
                         {COLORS.map((color) => (
                           <button
@@ -313,7 +302,7 @@ export default function SpatialHub() {
                 <div className="space-y-4">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
                     <List className="w-3 h-3" />
-                    Zonas Guardadas ({zones?.length || 0})
+                    Zonas Activas ({zones?.length || 0})
                   </h3>
                   
                   <div className="space-y-2">
@@ -365,21 +354,22 @@ export default function SpatialHub() {
                   </h3>
                   
                   <div className="space-y-4">
+                    <p className="text-[10px] text-slate-500 italic mb-2">Haz clic directamente sobre el mapa para añadir nodos logísticos.</p>
                     <input 
                       type="text" 
-                      placeholder="Nombre de la ruta..."
+                      placeholder="Nombre de la ruta estratégica..."
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                       value={newRouteName}
                       onChange={(e) => setNewRouteName(e.target.value)}
                     />
                     
                     <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
-                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos: {plannedPoints.length}</span>
+                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos Marcados: {plannedPoints.length}</span>
                       <button 
                         onClick={() => setPlannedPoints([])}
                         className="text-[9px] font-bold text-red-500 uppercase hover:underline"
                       >
-                        Limpiar
+                        Limpiar Mapa
                       </button>
                     </div>
 
@@ -389,7 +379,7 @@ export default function SpatialHub() {
                       className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
                     >
                       <Save className="w-4 h-4" />
-                      {isSaving ? 'GUARDANDO...' : 'GUARDAR RUTA'}
+                      {isSaving ? 'GUARDANDO...' : 'GUARDAR PLANEACIÓN'}
                     </button>
                   </div>
                 </div>
@@ -397,7 +387,7 @@ export default function SpatialHub() {
                 <div className="space-y-4">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
                     <RouteIcon className="w-3 h-3" />
-                    Rutas Guardadas ({savedRoutes?.length || 0})
+                    Rutas en Sistema ({savedRoutes?.length || 0})
                   </h3>
                   
                   <div className="space-y-2">
@@ -416,7 +406,7 @@ export default function SpatialHub() {
                             </div>
                             <div>
                               <p className="text-xs font-bold text-slate-800">{route.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Paradas</p>
+                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Nodos</p>
                             </div>
                           </div>
                           <button 
@@ -447,7 +437,7 @@ export default function SpatialHub() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Explorar territorio..." 
+                    placeholder="Filtrar por nombre o ubicación..." 
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -471,10 +461,9 @@ export default function SpatialHub() {
       <main 
         ref={mapContainerRef}
         className={cn(
-          "flex-1 relative bg-slate-100 overflow-hidden",
-          activeTab === 'rutas' ? "cursor-crosshair" : "cursor-default"
+          "flex-1 relative bg-slate-100 overflow-hidden transition-all duration-500",
+          activeTab === 'rutas' ? "cursor-crosshair ring-inset ring-4 ring-primary/10" : "cursor-default"
         )}
-        onWheel={handleWheelZoom}
         onClick={handleMapClick}
       >
         <VectorMap 
@@ -487,52 +476,41 @@ export default function SpatialHub() {
           containerRef={mapContainerRef}
         />
         
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4">
-           <div className="relative">
-              <div className="bg-white border border-slate-200 rounded-2xl p-2 shadow-xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Search className="w-5 h-5" />
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Buscar ciudad o zona guardada..."
-                  className="bg-transparent border-none outline-none text-sm flex-1 text-slate-800 placeholder:text-slate-400 font-medium"
-                  value={searchQuery}
-                  onFocus={() => setShowSearchResults(true)}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowSearchResults(true);
-                  }}
-                />
-                <button className="w-10 h-10 hover:bg-slate-100 rounded-xl text-slate-400 flex items-center justify-center transition-all" onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}>
-                  <Crosshair className="w-4 h-4" />
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {showSearchResults && searchQuery && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl max-h-[350px] overflow-y-auto z-40 custom-scrollbar"
-                  >
-                    <div className="p-2">
-                      {searchResults.mapPoints.map(point => (
-                        <SearchItemMini key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
-                      ))}
-                      {searchResults.saved.map(point => (
-                        <SearchItemMini key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-           </div>
+        {/* Floating Controls */}
+        <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-30">
+          <button 
+            onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))}
+            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg"
+          >
+            +
+          </button>
+          <button 
+            onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))}
+            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg"
+          >
+            -
+          </button>
+          <button 
+            onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}
+            className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all"
+          >
+            <Crosshair className="w-5 h-5" />
+          </button>
         </div>
-      </main>
 
-      {showSearchResults && <div className="fixed inset-0 z-20" onClick={() => setShowSearchResults(false)} />}
+        {activeTab === 'rutas' && (
+          <div className="absolute top-10 right-10 z-30 pointer-events-none">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-primary text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
+            >
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              MODO PLANEACIÓN ACTIVO
+            </motion.div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
@@ -559,20 +537,6 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
-    </div>
-  );
-}
-
-function SearchItemMini({ point, onClick, isSaved = false }: any) {
-  return (
-    <div onClick={onClick} className="flex items-center gap-3 p-3 hover:bg-slate-50 transition-all cursor-pointer rounded-xl group">
-      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200", isSaved ? "text-primary bg-primary/5" : "text-slate-400 bg-slate-50")}>
-        {isSaved ? <MapIcon className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-      </div>
-      <div className="flex-1">
-        <p className="text-xs font-bold text-slate-800 group-hover:text-primary transition-colors">{point.name}</p>
-        <p className="text-[9px] text-slate-400 uppercase tracking-widest">{isSaved ? 'Perímetro' : point.type}</p>
-      </div>
     </div>
   );
 }
