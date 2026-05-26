@@ -9,20 +9,15 @@ import {
   Circle, 
   Hexagon,
   Search,
-  ChevronRight,
   Save,
   Navigation,
-  MapPin,
   Trash2,
   Layers,
   Crosshair,
   List,
   MapPinned,
   Route as RouteIcon,
-  X,
-  Target,
   Pencil,
-  Locate,
   Eraser,
   Loader2,
   AlertCircle
@@ -55,8 +50,6 @@ const COLOMBIA_DATABASE = [
   { id: 'c3', name: 'Bogotá', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
   { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
   { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
-  { id: 'c6', name: 'Cartagena', lat: 10.3910, lng: -75.4794, type: 'Ciudad', color: '#3b82f6' },
-  { id: 'c7', name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
 ];
 
 export default function SpatialHub() {
@@ -66,11 +59,11 @@ export default function SpatialHub() {
   const [isSaving, setIsSaving] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
   const [newRouteName, setNewRouteName] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
   const [mapZoom, setMapZoom] = useState(14);
   const [viewCenter, setViewCenter] = useState({ lat: 4.6097, lng: -74.0817 });
   const [plannedPoints, setPlannedPoints] = useState<any[]>([]);
   const [zonePoints, setZonePoints] = useState<any[]>([]);
+  const [isDrawing, setIsDrawing] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const firestore = useFirestore();
@@ -95,11 +88,9 @@ export default function SpatialHub() {
       targetLng = point.stops[0].lng;
     }
     
-    const targetZoom = point.zoom || 15; 
-    
     if (targetLat !== undefined && targetLng !== undefined) {
       setViewCenter({ lat: targetLat, lng: targetLng });
-      setMapZoom(targetZoom);
+      setMapZoom(point.zoom || 15);
       if (point.name) {
         if (!point.stops) setNewZoneName(point.name);
         else setNewRouteName(point.name);
@@ -111,34 +102,32 @@ export default function SpatialHub() {
     const queryTerm = term.toLowerCase().trim();
     if (!queryTerm) return;
 
-    // Buscar en ciudades maestras
     const matchedCity = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(queryTerm));
     if (matchedCity) {
       handleFocusPoint(matchedCity);
       setNewZoneName(matchedCity.name);
-      toast({ title: "Ubicación Localizada", description: `Centrando en ${matchedCity.name}.` });
+      toast({ title: "Localización Exitosa", description: `Enfocando en ${matchedCity.name}.` });
       return;
     }
 
-    // Buscar en zonas guardadas
     const matchedZone = zones?.find(z => z.name?.toLowerCase().includes(queryTerm));
     if (matchedZone) {
       handleFocusPoint(matchedZone);
-      toast({ title: "Zona Detectada", description: `Enfocando en registro: ${matchedZone.name}.` });
+      toast({ title: "Zona Detectada", description: `Centrando en ${matchedZone.name}.` });
       return;
     }
-
-    toast({ title: "Sin Resultados Directos", description: `No se encontró "${term}" en el territorio.` });
+    
+    toast({ title: "Sin Resultados", description: `No se encontró "${term}".` });
   };
 
   const handleMapClick = (e: React.MouseEvent) => {
-    if (!mapContainerRef.current) return;
+    if (!mapContainerRef.current || !isDrawing) return;
 
     const rect = mapContainerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Lógica de proyección inversa simplificada para el centro actual
+    // Proyección inversa simplificada
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -158,12 +147,8 @@ export default function SpatialHub() {
   };
 
   const handleSaveZone = () => {
-    if (!firestore || !newZoneName) {
-      toast({ variant: "destructive", title: "Datos Incompletos", description: "Asigna un nombre a la zona." });
-      return;
-    }
-    if (zonePoints.length === 0) {
-      toast({ variant: "destructive", title: "Sin Perímetro", description: "Haz clic en el mapa para delimitar el área." });
+    if (!firestore || !newZoneName || zonePoints.length === 0) {
+      toast({ variant: "destructive", title: "Faltan Datos", description: "Asigna un nombre y dibuja en el mapa." });
       return;
     }
 
@@ -181,20 +166,18 @@ export default function SpatialHub() {
       .then(() => {
         toast({ 
           title: "Zona Registrada", 
-          description: `"${newZoneName}" se ha guardado en el sistema.`,
+          description: `"${newZoneName}" se guardó correctamente.`,
           action: (
-            <ToastAction altText="Planear Ruta" onClick={() => {
-              setActiveTab('rutas');
-              setNewRouteName(`Ruta ${newZoneName}`);
-            }}>
+            <ToastAction altText="Planear Ruta" onClick={() => { setActiveTab('rutas'); setNewRouteName(`Ruta ${newZoneName}`); }}>
               Planear Ruta
             </ToastAction>
           )
         });
         setNewZoneName('');
         setZonePoints([]);
+        setIsDrawing(false);
       })
-      .catch(async (error) => {
+      .catch((error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'zones',
           operation: 'create',
@@ -206,7 +189,7 @@ export default function SpatialHub() {
 
   const handleSaveRoute = () => {
     if (!firestore || !newRouteName || plannedPoints.length < 2) {
-      toast({ variant: "destructive", title: "Ruta Inválida", description: "Se requieren al menos 2 puntos." });
+      toast({ variant: "destructive", title: "Error", description: "Asigna un nombre y marca al menos 2 puntos." });
       return;
     }
 
@@ -219,11 +202,12 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Ruta Guardada", description: "Planeación logística registrada." });
+        toast({ title: "Ruta Guardada", description: "La planeación logística ha sido registrada." });
         setNewRouteName('');
         setPlannedPoints([]);
+        setIsDrawing(false);
       })
-      .catch(async (error) => {
+      .catch((error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: 'routes',
           operation: 'create',
@@ -237,7 +221,7 @@ export default function SpatialHub() {
     if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, coll, id));
-      toast({ title: "Registro Eliminado", description: "Datos removidos del sistema." });
+      toast({ title: "Registro Eliminado", description: "Se ha removido correctamente." });
     } catch (e) {
       console.error(e);
     }
@@ -247,10 +231,10 @@ export default function SpatialHub() {
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-body">
       <AppSidebar />
       
-      <aside className="w-[420px] min-w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl">
+      <aside className="w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20 transform -rotate-3 hover:rotate-0 transition-all">V</div>
+            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">V</div>
             <div>
               <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">Centro de Mando</h2>
               <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase">VectraLogix Hub</p>
@@ -261,7 +245,7 @@ export default function SpatialHub() {
             {ZONES_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); setIsDrawing(false); }}
                 className={cn(
                   "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
                   (activeTab === tab.id) ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-900"
@@ -278,27 +262,34 @@ export default function SpatialHub() {
           {activeTab === 'zonas' ? (
             <div className="space-y-8">
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Pencil className="w-3 h-3" /> Delimitar Cobertura
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                    <Pencil className="w-3 h-3" /> Delimitar Cobertura
+                  </h3>
+                  <button 
+                    onClick={() => setIsDrawing(!isDrawing)}
+                    className={cn(
+                      "text-[9px] font-bold px-3 py-1.5 rounded-full transition-all border",
+                      isDrawing ? "bg-primary text-white border-primary" : "bg-white text-slate-500 border-slate-200"
+                    )}
+                  >
+                    {isDrawing ? 'MODO DIBUJO ACTIVO' : 'ACTIVAR DIBUJO'}
+                  </button>
+                </div>
+                
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre / Buscar Ciudad</label>
-                    <div className="relative group">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Buscar Ciudad / Nombre</label>
+                    <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Escribe y presiona Enter para buscar..."
-                        className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 pr-12 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-medium"
+                        placeholder="Ej: Bello (Enter para buscar)"
+                        className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-medium"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch(newZoneName)}
                       />
-                      <button 
-                        onClick={() => handleGlobalSearch(newZoneName)} 
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary transition-colors"
-                      >
-                        <Search className="w-4 h-4" />
-                      </button>
+                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     </div>
                   </div>
                   
@@ -319,7 +310,7 @@ export default function SpatialHub() {
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-600 uppercase">Nodos: {zonePoints.length}</span>
+                    <span className="text-[10px] font-bold text-slate-600 uppercase">Puntos: {zonePoints.length}</span>
                     <button 
                       onClick={() => setZonePoints([])} 
                       className="text-[9px] font-bold text-rose-500 uppercase flex items-center gap-1.5 hover:bg-rose-50 px-2 py-1 rounded-md transition-all"
@@ -348,7 +339,7 @@ export default function SpatialHub() {
                   {loadingZones ? (
                     <div className="flex flex-col items-center py-10 gap-3 text-slate-300">
                       <Loader2 className="w-6 h-6 animate-spin" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sincronizando...</p>
                     </div>
                   ) : zones && zones.length > 0 ? (
                     zones.map((zone) => (
@@ -361,7 +352,7 @@ export default function SpatialHub() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={(e) => { e.stopPropagation(); setActiveTab('rutas'); setNewRouteName(`Ruta ${zone.name}`); }} className="p-2 hover:bg-primary/10 rounded-lg text-primary" title="Planificar Ruta"><RouteIcon className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); setActiveTab('rutas'); setNewRouteName(`Ruta ${zone.name}`); setIsDrawing(true); }} className="p-2 hover:bg-primary/10 rounded-lg text-primary" title="Planificar Ruta"><RouteIcon className="w-4 h-4" /></button>
                           <button onClick={(e) => { e.stopPropagation(); handleDelete('zones', zone.id); }} className="p-2 hover:bg-red-50 rounded-lg text-red-500" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
@@ -378,9 +369,21 @@ export default function SpatialHub() {
           ) : (
             <div className="space-y-8">
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Navigation className="w-3 h-3" /> Planeación Logística
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                    <Navigation className="w-3 h-3" /> Planeación Logística
+                  </h3>
+                  <button 
+                    onClick={() => setIsDrawing(!isDrawing)}
+                    className={cn(
+                      "text-[9px] font-bold px-3 py-1.5 rounded-full transition-all border",
+                      isDrawing ? "bg-primary text-white border-primary" : "bg-white text-slate-500 border-slate-200"
+                    )}
+                  >
+                    {isDrawing ? 'MODO DIBUJO ACTIVO' : 'ACTIVAR DIBUJO'}
+                  </button>
+                </div>
+                
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Ruta</label>
@@ -420,7 +423,7 @@ export default function SpatialHub() {
                   {loadingRoutes ? (
                     <div className="flex flex-col items-center py-10 gap-3 text-slate-300">
                       <Loader2 className="w-6 h-6 animate-spin" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sincronizando...</p>
                     </div>
                   ) : savedRoutes && savedRoutes.length > 0 ? (
                     savedRoutes.map((route) => (
@@ -448,9 +451,11 @@ export default function SpatialHub() {
         </div>
       </aside>
       
-      <main ref={mapContainerRef} className="flex-1 relative bg-slate-100 overflow-hidden cursor-crosshair">
-        {/* Capa de captura de clics sobre el mapa para dibujo */}
-        <div className="absolute inset-0 z-40 cursor-crosshair" onClick={handleMapClick} />
+      <main ref={mapContainerRef} className="flex-1 relative bg-slate-100 overflow-hidden">
+        {/* Capa táctica activa solo en modo dibujo */}
+        {isDrawing && (
+          <div className="absolute inset-0 z-40 cursor-crosshair bg-transparent" onClick={handleMapClick} />
+        )}
         
         <VectorMap 
           lat={viewCenter.lat} 
@@ -471,10 +476,14 @@ export default function SpatialHub() {
         </div>
 
         <div className="absolute top-10 right-10 z-50">
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-[10px] uppercase tracking-widest" style={{ backgroundColor: activeHexColor }}>
-            <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-[0_0_10px_white]" />
-            MODO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
-          </motion.div>
+          <AnimatePresence>
+            {isDrawing && (
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-[10px] uppercase tracking-widest" style={{ backgroundColor: activeHexColor }}>
+                <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-[0_0_10px_white]" />
+                CAPA TÁCTICA: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
     </div>
