@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { generateOptimizedDeliveryRoute } from '@/ai/flows/optimized-delivery-route-generation';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 
 export default function RoutePlanning() {
