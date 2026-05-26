@@ -56,10 +56,14 @@ export default function LoginPage() {
       toast({ title: "Acceso Google", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
+      let errorMessage = error.message;
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = "Este dominio no está autorizado en la consola de Firebase. Añádelo en Auth > Settings > Authorized domains.";
+      }
       toast({ 
         variant: "destructive", 
         title: "Error de Google", 
-        description: error.message 
+        description: errorMessage 
       });
     } finally {
       setIsLoading(false);
@@ -68,7 +72,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-body">
-      <Card className="w-full max-w-md shadow-2xl border-slate-200/60 rounded-[2rem] overflow-hidden">
+      <Card className="w-full max-w-md shadow-2xl border-slate-200/60 rounded-[2rem] overflow-hidden bg-white">
         <CardHeader className="space-y-4 text-center pb-8 pt-10">
           <div className="flex justify-center">
             <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/20">
@@ -76,7 +80,7 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-headline font-bold">Vectra Hub</CardTitle>
+            <CardTitle className="text-2xl font-headline font-bold text-slate-900">Vectra Hub</CardTitle>
             <CardDescription className="text-slate-500 font-medium">
               {isRegistering ? 'Crea una nueva cuenta de operador' : 'Ingresa al centro de mando logístico'}
             </CardDescription>
@@ -115,7 +119,7 @@ export default function LoginPage() {
             </div>
             <Button 
               type="submit" 
-              className="w-full h-12 rounded-xl bg-primary font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+              className="w-full h-12 rounded-xl bg-primary font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-white"
               disabled={isLoading}
             >
               {isLoading ? (
