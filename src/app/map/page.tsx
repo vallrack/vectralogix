@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { VectorMap } from '@/components/map/VectorMap';
 import { 
@@ -51,6 +51,8 @@ const COLOMBIA_DATABASE = [
   { id: 'c3', name: 'Bogotá', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
   { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
   { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
+  { id: 'c6', name: 'Cartagena', lat: 10.3910, lng: -75.4794, type: 'Ciudad', color: '#3b82f6' },
+  { id: 'c7', name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
 ];
 
 export default function SpatialHub() {
@@ -61,7 +63,6 @@ export default function SpatialHub() {
   const [newZoneName, setNewZoneName] = useState('');
   const [newRouteName, setNewRouteName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [mapZoom, setMapZoom] = useState(14);
   const [viewCenter, setViewCenter] = useState({ lat: 4.6097, lng: -74.0817 });
   const [plannedPoints, setPlannedPoints] = useState<any[]>([]);
@@ -77,14 +78,20 @@ export default function SpatialHub() {
 
   const searchResults = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return { saved: [], mapPoints: [] };
-    const saved = (zones || []).filter(z => z.name.toLowerCase().includes(query));
-    const mapPoints = COLOMBIA_DATABASE.filter(l => l.name.toLowerCase().includes(query));
-    return { saved, mapPoints };
-  }, [zones, searchQuery]);
+    if (!query) return { savedZones: [], savedRoutes: [], mapPoints: [] };
+    
+    const matchedZones = (zones || []).filter(z => z.name.toLowerCase().includes(query));
+    const matchedRoutes = (savedRoutes || []).filter(r => r.name.toLowerCase().includes(query));
+    const matchedMapPoints = COLOMBIA_DATABASE.filter(l => l.name.toLowerCase().includes(query));
+    
+    return { 
+      savedZones: matchedZones, 
+      savedRoutes: matchedRoutes, 
+      mapPoints: matchedMapPoints 
+    };
+  }, [zones, savedRoutes, searchQuery]);
 
   const handleFocusPoint = (point: any) => {
-    // Determine coordinate center
     let targetLat = point.lat;
     let targetLng = point.lng;
 
@@ -101,7 +108,6 @@ export default function SpatialHub() {
     if (targetLat !== undefined && targetLng !== undefined) {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
-      setShowSearchResults(false);
       toast({
         title: "Enfoque Táctico",
         description: `Visualizando: ${point.name}`,
@@ -444,13 +450,48 @@ export default function SpatialHub() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  {searchResults.mapPoints.map((point) => (
-                    <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
-                  ))}
-                  {searchResults.saved.map((point) => (
-                    <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                  ))}
+                <div className="space-y-4">
+                  {/* Local Database Results */}
+                  {searchResults.mapPoints.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2">Ubicaciones del Territorio</h4>
+                      {searchResults.mapPoints.map((point) => (
+                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Saved Zones Results */}
+                  {searchResults.savedZones.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-[9px] font-bold text-primary uppercase tracking-widest px-2">Zonas Guardadas</h4>
+                      {searchResults.savedZones.map((point) => (
+                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Saved Routes Results */}
+                  {searchResults.savedRoutes.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest px-2">Rutas Guardadas</h4>
+                      {searchResults.savedRoutes.map((point) => (
+                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                      ))}
+                    </div>
+                  )}
+
+                  {searchQuery && 
+                   searchResults.mapPoints.length === 0 && 
+                   searchResults.savedZones.length === 0 && 
+                   searchResults.savedRoutes.length === 0 && (
+                    <div className="py-20 text-center space-y-4">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+                        <Search className="w-8 h-8 text-slate-200" />
+                      </div>
+                      <p className="text-xs text-slate-400">No se encontraron resultados tácticos.</p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
@@ -476,7 +517,6 @@ export default function SpatialHub() {
           containerRef={mapContainerRef}
         />
         
-        {/* Floating Controls */}
         <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-30">
           <button 
             onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))}
@@ -533,7 +573,9 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
         </div>
         <div>
           <p className="text-xs font-bold text-slate-800">{point.name}</p>
-          <p className="text-[9px] text-slate-400 uppercase tracking-widest">{isSaved ? 'Zona' : point.type}</p>
+          <p className="text-[9px] text-slate-400 uppercase tracking-widest">
+            {isSaved ? (point.stops ? 'Ruta' : 'Zona') : (point.type || 'Punto')}
+          </p>
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
