@@ -23,6 +23,12 @@ const GeocodeOutputSchema = z.object({
 
 export type GeocodeOutput = z.infer<typeof GeocodeOutputSchema>;
 
+export type GeocodeResponse = {
+  success: boolean;
+  data?: GeocodeOutput;
+  error?: string;
+};
+
 const geocodePrompt = ai.definePrompt({
   name: 'geocodePrompt',
   input: { schema: GeocodeInputSchema },
@@ -48,25 +54,32 @@ const geocodeLocationFlow = ai.defineFlow(
     outputSchema: GeocodeOutputSchema,
   },
   async (input) => {
-    try {
-      const { output } = await geocodePrompt(input);
-      if (!output) {
-        throw new Error('La IA no pudo procesar la ubicación geográfica.');
-      }
-      return output;
-    } catch (error: any) {
-      console.error('Error in geocodeLocationFlow:', error);
-      
-      // Capturamos específicamente el error de API Key filtrada o inválida
-      if (error.message?.includes('leaked') || error.message?.includes('API key') || error.status === 403) {
-        throw new Error('Error de configuración: El acceso al servicio de mapas inteligente (Gemini API) está bloqueado por seguridad (Llave reportada como filtrada).');
-      }
-      
-      throw new Error('No se pudo encontrar la ubicación. Intenta con una descripción más específica o verifica tu conexión.');
+    const { output } = await geocodePrompt(input);
+    if (!output) {
+      throw new Error('La IA no pudo procesar la ubicación geográfica.');
     }
+    return output;
   }
 );
 
-export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeOutput> {
-  return geocodeLocationFlow(input);
+export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeResponse> {
+  try {
+    const result = await geocodeLocationFlow(input);
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Error in geocodeLocationFlow:', error);
+    
+    // Capturamos específicamente el error de API Key filtrada o inválida
+    if (error.message?.includes('leaked') || error.message?.includes('API key') || error.status === 403) {
+      return { 
+        success: false, 
+        error: 'El servicio de IA (Gemini) está temporalmente fuera de servicio por una incidencia de seguridad con la API Key. Por favor, contacte con soporte.' 
+      };
+    }
+    
+    return { 
+      success: false, 
+      error: 'No se pudo localizar el punto exacto. Prueba con una dirección más completa o busca en otra zona.' 
+    };
+  }
 }

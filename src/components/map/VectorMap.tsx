@@ -45,26 +45,32 @@ export function VectorMap({
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRef]);
 
-  // Proyectar coordenadas geográficas a píxeles de pantalla relativo al centro (lat, lng)
+  // Proyección Web Mercator para sincronización exacta
   const projectPoint = (pLat: number, pLng: number) => {
     if (dimensions.width === 0) return { x: 0, y: 0 };
     
-    // El tamaño del mundo en píxeles para este nivel de zoom
     const worldSize = 256 * Math.pow(2, zoom);
     
-    // Escala de píxeles por grado
-    const lngScale = worldSize / 360;
-    
-    // Ajustar latitud (Proyección Mercator simplificada para pequeñas distancias)
-    const latRad = lat * Math.PI / 180;
-    const latScale = lngScale / Math.cos(latRad);
+    // Función para obtener la coordenada Y en Mercator
+    const latToY = (latitude: number) => {
+      const sinLat = Math.sin(latitude * Math.PI / 180);
+      return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * worldSize;
+    };
 
-    const xOffset = (pLng - lng) * lngScale;
-    const yOffset = (lat - pLat) * latScale;
+    // Función para obtener la coordenada X en Mercator
+    const lngToX = (longitude: number) => {
+      return (longitude + 180) / 360 * worldSize;
+    };
+
+    const centerX = lngToX(lng);
+    const centerY = latToY(lat);
+    
+    const pointX = lngToX(pLng);
+    const pointY = latToY(pLat);
 
     return {
-      x: dimensions.width / 2 + xOffset,
-      y: dimensions.height / 2 + yOffset
+      x: dimensions.width / 2 + (pointX - centerX),
+      y: dimensions.height / 2 + (pointY - centerY)
     };
   };
 
@@ -104,25 +110,35 @@ export function VectorMap({
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
-          {/* Zonas Guardadas (Capa de Fondo) */}
+          {/* Zonas Guardadas */}
           {projectedZones.map((zone) => {
             const points = zone.points;
             if (!points || points.length === 0) return null;
             return (
               <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.35 }}>
                 {zone.type === 'polygon' && points.length > 2 ? (
-                  <path d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
+                  <path d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="6,3" className="opacity-40" />
                 ) : zone.type === 'rect' ? (
-                  <rect x={points[0].x - 60} y={points[0].y - 45} width={120} height={90} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
+                  <rect x={points[0].x - 40} y={points[0].y - 30} width={80} height={60} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="6,3" className="opacity-40" />
                 ) : (
-                  <circle cx={points[0].x} cy={points[0].y} r={80} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
+                  <circle cx={points[0].x} cy={points[0].y} r={50} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="6,3" className="opacity-40" />
                 )}
-                <text x={points[0].x} y={points[0].y - 30} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_2px_2px_rgba(255,255,255,1)]">
+                <text x={points[0].x} y={points[0].y - 15} textAnchor="middle" fill={zone.color} fontSize="9" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_1px_1px_rgba(255,255,255,1)]">
                   {zone.name}
                 </text>
               </motion.g>
             );
           })}
+
+          {/* Rutas Guardadas */}
+          {projectedSavedRoutes.map((route) => (
+            <g key={route.id} className="opacity-50">
+              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="3" strokeDasharray="8,4" />
+              {route.points.map((p: any, i: number) => (
+                <circle key={i} cx={p.x} cy={p.y} r="3" fill="#2563eb" stroke="white" strokeWidth="1.5" />
+              ))}
+            </g>
+          ))}
 
           {/* Zona en Edición */}
           {currentZonePath.length > 0 && (
@@ -133,39 +149,29 @@ export function VectorMap({
                 <line x1={currentZonePath[0].x} y1={currentZonePath[0].y} x2={currentZonePath[1].x} y2={currentZonePath[1].y} stroke={activeColor} strokeWidth="3" strokeDasharray="5,5" />
               ) : null}
               {currentZonePath.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r="8" fill={activeColor} stroke="white" strokeWidth="3" className="shadow-xl" />
+                <circle key={i} cx={p.x} cy={p.y} r="6" fill={activeColor} stroke="white" strokeWidth="2" />
               ))}
             </g>
           )}
-
-          {/* Rutas Guardadas */}
-          {projectedSavedRoutes.map((route) => (
-            <g key={route.id} className="opacity-60">
-              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="4" strokeDasharray="10,5" />
-              {route.points.map((p: any, i: number) => (
-                <circle key={i} cx={p.x} cy={p.y} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
-              ))}
-            </g>
-          ))}
 
           {/* Ruta en Edición */}
           {currentRoutePath.length > 0 && (
             <g>
               {currentRoutePath.length > 1 && (
-                <path d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="6" strokeDasharray="15,8" />
+                <path d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="5" strokeDasharray="12,6" />
               )}
               {currentRoutePath.map((p, i) => (
                 <g key={i}>
-                  <circle cx={p.x} cy={p.y} r="9" fill="#2563eb" stroke="white" strokeWidth="3" />
-                  <text x={p.x + 14} y={p.y + 5} fill="#2563eb" fontSize="11" fontWeight="900" className="drop-shadow-md">P{i + 1}</text>
+                  <circle cx={p.x} cy={p.y} r="7" fill="#2563eb" stroke="white" strokeWidth="2" />
+                  <text x={p.x + 10} y={p.y + 4} fill="#2563eb" fontSize="10" fontWeight="900" className="drop-shadow-md">P{i + 1}</text>
                 </g>
               ))}
             </g>
           )}
         </svg>
 
-        {/* Mira Telescópica Central */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-10">
+        {/* Mira Central */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-5">
           <div className="w-40 h-40 border border-primary/20 rounded-full flex items-center justify-center">
             <div className="w-1 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(37,99,235,1)]" />
           </div>
