@@ -45,10 +45,17 @@ export function VectorMap({
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRef]);
 
+  // Proyectar coordenadas geográficas a píxeles de pantalla relativo al centro (lat, lng)
   const projectPoint = (pLat: number, pLng: number) => {
     if (dimensions.width === 0) return { x: 0, y: 0 };
+    
+    // El tamaño del mundo en píxeles para este nivel de zoom
     const worldSize = 256 * Math.pow(2, zoom);
+    
+    // Escala de píxeles por grado
     const lngScale = worldSize / 360;
+    
+    // Ajustar latitud (Proyección Mercator simplificada para pequeñas distancias)
     const latRad = lat * Math.PI / 180;
     const latScale = lngScale / Math.cos(latRad);
 
@@ -76,7 +83,7 @@ export function VectorMap({
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-slate-200 select-none transition-opacity duration-300">
-      <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] brightness-[0.98]">
+      <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] brightness-[0.98] pointer-events-none">
         <iframe
           key={`${lat}-${lng}-${displayZoom}`}
           src={mapUrl}
@@ -86,6 +93,7 @@ export function VectorMap({
           allowFullScreen
           loading="lazy"
           title="Google Maps Tactical Console"
+          className="pointer-events-none"
         />
       </div>
 

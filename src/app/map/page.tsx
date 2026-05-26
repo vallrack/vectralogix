@@ -20,12 +20,12 @@ import {
   Pencil,
   Eraser,
   Loader2,
-  AlertCircle
+  Hand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -56,7 +56,7 @@ const COLOMBIA_DATABASE = [
 export default function SpatialHub() {
   const [activeTab, setActiveTab] = useState('zonas');
   const [selectedColor, setSelectedColor] = useState('blue');
-  const [activeTool, setActiveTool] = useState('polygon');
+  const [activeTool, setActiveTool] = useState('polygon'); // polygon, rect, circle, navigate
   const [isSaving, setIsSaving] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
   const [newRouteName, setNewRouteName] = useState('');
@@ -65,6 +65,8 @@ export default function SpatialHub() {
   const [plannedPoints, setPlannedPoints] = useState<any[]>([]);
   const [zonePoints, setZonePoints] = useState<any[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef<{ x: number, y: number, centerLat: number, centerLng: number } | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const firestore = useFirestore();
@@ -76,6 +78,41 @@ export default function SpatialHub() {
   const { data: savedRoutes, loading: loadingRoutes } = useCollection(routesQuery);
 
   const activeHexColor = useMemo(() => COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6', [selectedColor]);
+
+  // Manejo de Pan (Navegación con la mano)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isDrawing && activeTool === 'navigate') {
+      setIsPanning(true);
+      panStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        centerLat: viewCenter.lat,
+        centerLng: viewCenter.lng
+      };
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isPanning && panStartRef.current && mapContainerRef.current) {
+      const deltaX = e.clientX - panStartRef.current.x;
+      const deltaY = e.clientY - panStartRef.current.y;
+
+      const worldSize = 256 * Math.pow(2, mapZoom);
+      const lngScale = worldSize / 360;
+      const latRad = panStartRef.current.centerLat * Math.PI / 180;
+      const latScale = lngScale / Math.cos(latRad);
+
+      const newLng = panStartRef.current.centerLng - (deltaX / lngScale);
+      const newLat = panStartRef.current.centerLat + (deltaY / latScale);
+
+      setViewCenter({ lat: newLat, lng: newLng });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  };
 
   const handleGlobalSearch = (term: string) => {
     const queryTerm = term.toLowerCase().trim();
@@ -144,10 +181,9 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        // Enfoque automático con Zoom al guardar
         if (zonePoints.length > 0) {
           setViewCenter({ lat: zonePoints[0].lat, lng: zonePoints[0].lng });
-          setMapZoom(17); // Zoom más cercano para inspeccionar
+          setMapZoom(16);
         }
 
         toast({ 
@@ -167,7 +203,8 @@ export default function SpatialHub() {
         
         setNewZoneName('');
         setZonePoints([]);
-        setIsDrawing(false); // Devolver la manito de navegación
+        setIsDrawing(false);
+        setActiveTool('navigate');
       })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -203,7 +240,8 @@ export default function SpatialHub() {
         toast({ title: "Ruta Guardada", description: "Trayectoria logística registrada exitosamente." });
         setNewRouteName('');
         setPlannedPoints([]);
-        setIsDrawing(false); // Devolver la manito de navegación
+        setIsDrawing(false);
+        setActiveTool('navigate');
       })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -258,7 +296,7 @@ export default function SpatialHub() {
             {ZONES_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setIsDrawing(false); }}
+                onClick={() => { setActiveTab(tab.id); setIsDrawing(false); setActiveTool('navigate'); }}
                 className={cn(
                   "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
                   (activeTab === tab.id) ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-900"
@@ -280,7 +318,12 @@ export default function SpatialHub() {
                     <Pencil className="w-3 h-3" /> Registrar Cobertura
                   </h3>
                   <button 
-                    onClick={() => setIsDrawing(!isDrawing)}
+                    onClick={() => { 
+                      const newDrawing = !isDrawing;
+                      setIsDrawing(newDrawing);
+                      if (newDrawing && activeTool === 'navigate') setActiveTool('polygon');
+                      if (!newDrawing) setActiveTool('navigate');
+                    }}
                     className={cn(
                       "text-[9px] font-bold px-3 py-1.5 rounded-full transition-all border",
                       isDrawing ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
@@ -318,10 +361,11 @@ export default function SpatialHub() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setIsDrawing(true); }} icon={Hexagon} label="POLÍGONO" />
-                    <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); setIsDrawing(true); }} icon={Square} label="ÁREA" />
-                    <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); setIsDrawing(true); }} icon={Circle} label="RADIO" />
+                  <div className="grid grid-cols-4 gap-1.5">
+                    <ToolButton active={activeTool === 'navigate'} onClick={() => { setActiveTool('navigate'); setIsDrawing(false); }} icon={Hand} label="NAV" />
+                    <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setIsDrawing(true); }} icon={Hexagon} label="POL" />
+                    <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); setIsDrawing(true); }} icon={Square} label="REC" />
+                    <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); setIsDrawing(true); }} icon={Circle} label="RAD" />
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">
@@ -387,7 +431,12 @@ export default function SpatialHub() {
                     <Navigation className="w-3 h-3" /> Planeación de Ruta
                   </h3>
                   <button 
-                    onClick={() => setIsDrawing(!isDrawing)}
+                    onClick={() => {
+                      const newDrawing = !isDrawing;
+                      setIsDrawing(newDrawing);
+                      if (newDrawing) setActiveTool('polygon');
+                      if (!newDrawing) setActiveTool('navigate');
+                    }}
                     className={cn(
                       "text-[9px] font-bold px-3 py-1.5 rounded-full transition-all border",
                       isDrawing ? "bg-primary text-white border-primary shadow-lg" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
@@ -411,6 +460,10 @@ export default function SpatialHub() {
                       />
                       <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ToolButton active={activeTool === 'navigate'} onClick={() => { setActiveTool('navigate'); setIsDrawing(false); }} icon={Hand} label="NAVEGAR" />
+                    <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setIsDrawing(true); }} icon={Hexagon} label="DIBUJAR" />
                   </div>
                   <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl shadow-inner">
                     <span className="text-[10px] font-bold text-slate-600 uppercase">Paradas: <span className="text-primary">{plannedPoints.length}</span></span>
@@ -466,12 +519,22 @@ export default function SpatialHub() {
         </div>
       </aside>
       
-      <main ref={mapContainerRef} className="flex-1 relative bg-slate-200 overflow-hidden">
-        {/* Capa de Captura Táctica (Solo activa en modo dibujo) */}
-        {isDrawing && (
+      <main 
+        ref={mapContainerRef} 
+        className={cn(
+          "flex-1 relative bg-slate-200 overflow-hidden",
+          activeTool === 'navigate' ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"
+        )}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
+        {/* Capa de Captura Táctica */}
+        {(isDrawing || activeTool === 'navigate') && (
           <div 
-            className="absolute inset-0 z-40 cursor-crosshair bg-transparent" 
-            onClick={handleMapClick} 
+            className="absolute inset-0 z-40 bg-transparent" 
+            onClick={isDrawing ? handleMapClick : undefined} 
           />
         )}
         
@@ -510,9 +573,9 @@ export default function SpatialHub() {
 
 function ToolButton({ active, onClick, icon: Icon, label }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center py-4 rounded-2xl border transition-all gap-2 group", active ? "bg-primary/5 border-primary text-primary shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
-      <Icon className={cn("w-4.5 h-4.5 transition-transform group-hover:scale-110", active && "scale-110 text-primary")} />
-      <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center py-3 rounded-2xl border transition-all gap-1 group", active ? "bg-primary/5 border-primary text-primary shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
+      <Icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", active && "scale-110 text-primary")} />
+      <span className="text-[7px] font-black uppercase tracking-widest">{label}</span>
     </button>
   );
 }
