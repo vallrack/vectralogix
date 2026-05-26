@@ -24,9 +24,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Sincronizando Vectra Hub...</p>
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin" />
+            <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-primary rounded-full animate-spin" />
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-1">VECTRA HUB</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Iniciando Sincronización...</p>
+          </div>
         </div>
       </div>
     );
