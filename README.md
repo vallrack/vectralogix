@@ -12,7 +12,7 @@ Este es el centro de mando operativo de VectraLogix, diseñado para la gestión 
 
 ## Instrucciones para GitHub
 
-Para subir este proyecto a tu repositorio, abre una terminal en la raíz del proyecto y ejecuta:
+Para subir este proyecto a tu repositorio de GitHub, abre una terminal en la raíz del proyecto y ejecuta los siguientes comandos:
 
 ```bash
 git init
@@ -25,7 +25,7 @@ git push -u origin main
 
 ## Despliegue en Firebase
 
-Una vez vinculado a GitHub, puedes conectar este repositorio a **Firebase App Hosting** para habilitar despliegues automáticos y vincular tu dominio personalizado.
+Una vez vinculado a GitHub, puedes conectar este repositorio a **Firebase App Hosting** para habilitar despliegues automáticos y vincular tu dominio personalizado. No olvides añadir tu dominio en la consola de Firebase > Authentication > Settings > Dominios autorizados.
 
 ---
 Desarrollado con Next.js, Genkit y Firebase.
