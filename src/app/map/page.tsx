@@ -17,12 +17,12 @@ import {
   Trash2,
   Layers,
   Crosshair,
-  Map as MapIcon,
   MousePointer2,
   List,
   MapPinned,
   Route as RouteIcon,
-  X
+  X,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -112,7 +112,6 @@ export default function SpatialHub() {
         title: "Enfoque Táctico",
         description: `Visualizando: ${point.name}`,
       });
-      // Clear search after selection to return to tabs
       setSearchQuery('');
     }
   };
@@ -124,7 +123,6 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Inverse projection to estimate lat/lng
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -215,7 +213,6 @@ export default function SpatialHub() {
       <AppSidebar />
       
       <aside className="w-[420px] min-w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
-        {/* Sidebar Header with Search */}
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 space-y-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">
@@ -246,28 +243,28 @@ export default function SpatialHub() {
             )}
           </div>
 
-          {!searchQuery && (
-            <div className="flex bg-slate-200/50 p-1 rounded-xl">
-              {ZONES_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
-                    activeTab === tab.id 
-                      ? "bg-white text-primary shadow-sm" 
-                      : "text-slate-500 hover:text-slate-900"
-                  )}
-                >
-                  <tab.icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="flex bg-slate-200/50 p-1 rounded-xl">
+            {ZONES_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSearchQuery('');
+                }}
+                className={cn(
+                  "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
+                  (activeTab === tab.id && !searchQuery)
+                    ? "bg-white text-primary shadow-sm" 
+                    : "text-slate-500 hover:text-slate-900"
+                )}
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Dynamic Sidebar Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white">
           <AnimatePresence mode="wait">
             {searchQuery ? (
@@ -281,50 +278,47 @@ export default function SpatialHub() {
                   Resultados de Búsqueda
                 </h3>
 
-                {searchResults && (
-                  <div className="space-y-6">
-                    {/* Local Database Results */}
-                    {searchResults.mapPoints.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2">Ubicaciones del Territorio</h4>
-                        {searchResults.mapPoints.map((point) => (
-                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
-                        ))}
+                <div className="space-y-6">
+                  {searchResults?.mapPoints.length === 0 && 
+                   searchResults?.savedZones.length === 0 && 
+                   searchResults?.savedRoutes.length === 0 ? (
+                    <div className="py-20 text-center space-y-4">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto border border-dashed border-slate-200">
+                        <Search className="w-6 h-6 text-slate-200" />
                       </div>
-                    )}
-
-                    {/* Saved Zones Results */}
-                    {searchResults.savedZones.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest px-2">Zonas Registradas</h4>
-                        {searchResults.savedZones.map((point) => (
-                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Saved Routes Results */}
-                    {searchResults.savedRoutes.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest px-2">Planeaciones Guardadas</h4>
-                        {searchResults.savedRoutes.map((point) => (
-                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                        ))}
-                      </div>
-                    )}
-
-                    {searchResults.mapPoints.length === 0 && 
-                     searchResults.savedZones.length === 0 && 
-                     searchResults.savedRoutes.length === 0 && (
-                      <div className="py-20 text-center space-y-4">
-                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto border border-dashed border-slate-200">
-                          <Search className="w-6 h-6 text-slate-200" />
+                      <p className="text-xs text-slate-400">No se encontraron objetivos tácticos.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {searchResults?.mapPoints.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2">Ubicaciones del Territorio</h4>
+                          {searchResults.mapPoints.map((point) => (
+                            <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
+                          ))}
                         </div>
-                        <p className="text-xs text-slate-400">No se encontraron objetivos tácticos.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+
+                      {searchResults?.savedZones.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest px-2">Zonas Registradas</h4>
+                          {searchResults.savedZones.map((point) => (
+                            <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                          ))}
+                        </div>
+                      )}
+
+                      {searchResults?.savedRoutes.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest px-2">Planeaciones Guardadas</h4>
+                          {searchResults.savedRoutes.map((point) => (
+                            <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </motion.div>
             ) : (
               <>
@@ -588,7 +582,7 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
     <div onClick={onClick} className={cn("flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group", isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm")}>
       <div className="flex items-center gap-3">
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", isSaved ? "bg-primary/10 border-primary/20 text-primary" : "bg-slate-50 border-slate-200 text-slate-400")}>
-          {isSaved ? (point.stops ? <RouteIcon className="w-4 h-4" /> : <Layers className="w-4 h-4" />) : <MapPin className="w-4 h-4" />}
+          {isSaved ? (point.stops ? <Target className="w-4 h-4" /> : <Layers className="w-4 h-4" />) : <MapPin className="w-4 h-4" />}
         </div>
         <div>
           <p className="text-xs font-bold text-slate-800">{point.name}</p>
