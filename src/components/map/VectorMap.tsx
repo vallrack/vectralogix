@@ -15,7 +15,10 @@ interface VectorMapProps {
 
 export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], containerRef }: VectorMapProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=${zoom}&output=embed&t=m`;
+  
+  // Usamos un zoom redondeado para que el iframe de Google Maps responda correctamente
+  const displayZoom = Math.round(zoom);
+  const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=${displayZoom}&hl=es&output=embed&iwloc=near`;
 
   useEffect(() => {
     if (!containerRef?.current) return;
@@ -30,11 +33,11 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRef]);
 
-  // Función de proyección precisa basada en píxeles de pantalla
+  // Función de proyección precisa basada en píxeles de pantalla y zoom
   const projectPoint = (pLat: number, pLng: number) => {
-    const latRad = lat * Math.PI / 180;
     const worldSize = 256 * Math.pow(2, zoom);
     const lngScale = worldSize / 360;
+    const latRad = lat * Math.PI / 180;
     const latScale = lngScale / Math.cos(latRad);
 
     const xOffset = (pLng - lng) * lngScale;
@@ -64,19 +67,20 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-white select-none pointer-events-none">
-      <div className="absolute inset-0 grayscale-[0.2] contrast-[1.05] opacity-70">
+      <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] opacity-80">
         <iframe
+          key={`${lat}-${lng}-${displayZoom}`} // Forzamos recarga del iframe al cambiar posición clave
           src={mapUrl}
           width="100%"
           height="100%"
           style={{ border: 0 }}
           allowFullScreen
           loading="lazy"
-          title="Google Maps Dynamic View"
+          title="Google Maps Tactical Console"
         />
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-white/10 pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-200/20 via-transparent to-white/10 pointer-events-none z-10" />
       
       <div className="absolute inset-0 pointer-events-none z-20">
         <svg 
@@ -86,11 +90,11 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
           <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#2563eb" strokeWidth="0.5" opacity="0.03" />
+            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#2563eb" strokeWidth="0.5" opacity="0.05" />
           </pattern>
           <rect width="100%" height="100%" fill="url(#grid)" />
 
-          {/* Zonas Proyectadas con Escala Adaptativa */}
+          {/* Zonas Proyectadas con Escala Dinámica */}
           {projectedZones.map((zone, i) => {
             const baseSize = Math.pow(2, zoom - 12) * 20;
             return (
@@ -107,12 +111,12 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
                 ) : (
                   <path d={`M${zone.x},${zone.y - baseSize * 6} L${zone.x + baseSize * 7},${zone.y - baseSize} L${zone.x + baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 7},${zone.y - baseSize} Z`} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="4,2" />
                 )}
-                <text x={zone.x} y={zone.y} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="800" opacity="1" className="uppercase tracking-widest drop-shadow-sm">{zone.name}</text>
+                <text x={zone.x} y={zone.y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="800" opacity="1" className="uppercase tracking-widest drop-shadow-md">{zone.name}</text>
               </motion.g>
             );
           })}
 
-          {/* Rutas con Líneas de Alta Precisión */}
+          {/* Rutas con Líneas de Telemetría */}
           {pathPoints.length > 1 && (
             <motion.path
               initial={{ pathLength: 0 }}
@@ -127,7 +131,7 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
             />
           )}
 
-          {/* Nodos Tácticos */}
+          {/* Nodos Estratégicos */}
           {pathPoints.map((point, i) => (
             <motion.g 
               key={i}
@@ -142,12 +146,12 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
           ))}
         </svg>
 
-        {/* Mira Central Táctica */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-15">
-          <div className="w-32 h-32 border border-primary/30 rounded-full flex items-center justify-center">
-            <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-            <div className="absolute w-full h-[1px] bg-primary/20" />
-            <div className="absolute h-full w-[1px] bg-primary/20" />
+        {/* Mira Central de Referencia */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-20">
+          <div className="w-40 h-40 border border-primary/40 rounded-full flex items-center justify-center">
+            <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-lg" />
+            <div className="absolute w-full h-[1px] bg-primary/30" />
+            <div className="absolute h-full w-[1px] bg-primary/30" />
           </div>
         </div>
       </div>

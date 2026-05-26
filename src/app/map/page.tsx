@@ -52,6 +52,7 @@ const COLOMBIA_DATABASE = [
   { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
   { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
   { id: 'c7', name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
+  { id: 'c8', name: 'Cartagena', lat: 10.4226, lng: -75.5403, type: 'Ciudad', color: '#f43f5e' },
 ];
 
 export default function SpatialHub() {
@@ -85,11 +86,11 @@ export default function SpatialHub() {
     
     if (lat !== undefined && lng !== undefined) {
       setViewCenter({ lat, lng });
-      setMapZoom(17.5); 
+      setMapZoom(18); // Zoom profundo para exploración táctica
       setShowSearchResults(false);
       setSearchQuery(point.name || '');
       toast({
-        title: "Localización Exitosa",
+        title: "Geo-Lock Activado",
         description: `Posicionando mapa en: ${point.name || 'Coordenadas seleccionadas'}`,
       });
     }
@@ -97,15 +98,16 @@ export default function SpatialHub() {
 
   const handleEditorKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && newZoneName.trim()) {
-      const match = COLOMBIA_DATABASE.find(c => c.name.toLowerCase() === newZoneName.toLowerCase().trim()) 
-                 || (zones || []).find(z => z.name.toLowerCase() === newZoneName.toLowerCase().trim());
+      const query = newZoneName.toLowerCase().trim();
+      const match = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(query)) 
+                 || (zones || []).find(z => z.name.toLowerCase().includes(query));
       
       if (match) {
         handleFocusPoint(match);
       } else {
         toast({
           title: "Búsqueda de Referencia",
-          description: `No se encontró una ciudad exacta para "${newZoneName}", pero puedes dibujar el área manualmente.`,
+          description: `No se encontró una ciudad exacta para "${newZoneName}", pero puedes posicionarte manualmente.`,
         });
       }
     }
@@ -118,9 +120,10 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const latRad = viewCenter.lat * Math.PI / 180;
+    // Cálculo de proyección de precisión
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
+    const latRad = viewCenter.lat * Math.PI / 180;
     const latScale = lngScale / Math.cos(latRad);
 
     const deltaX = x - rect.width / 2;
@@ -139,7 +142,7 @@ export default function SpatialHub() {
     setPlannedPoints([...plannedPoints, newPoint]);
     toast({ 
       title: "Nodo Fijado", 
-      description: "Punto de ruta establecido con precisión." 
+      description: "Punto de ruta establecido con precisión en la cartografía." 
     });
   };
 
@@ -161,8 +164,8 @@ export default function SpatialHub() {
           title: "Zona Registrada", 
           description: "Perímetro guardado. Iniciando exploración de alta resolución." 
         });
+        setMapZoom(18); // Auto-zoom tras guardar
         setNewZoneName('');
-        setMapZoom(18); 
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -188,7 +191,7 @@ export default function SpatialHub() {
       <AppSidebar />
       
       <aside className="w-[400px] min-w-[400px] bg-card border-r border-slate-200/60 flex flex-col z-20 shadow-xl relative">
-        <div className="p-6 border-b border-slate-100 bg-slate-50">
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">
               V
@@ -199,7 +202,7 @@ export default function SpatialHub() {
             </div>
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-xl">
+          <div className="flex bg-slate-100/80 p-1 rounded-xl">
             {ZONES_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -240,7 +243,7 @@ export default function SpatialHub() {
                       <div className="relative group">
                         <input 
                           type="text" 
-                          placeholder="Escribe una ciudad y presiona Enter..."
+                          placeholder="Ciudad o zona (ej. Bello)..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all pr-10"
                           value={newZoneName}
                           onKeyDown={handleEditorKeyDown}
@@ -441,7 +444,7 @@ export default function SpatialHub() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Geolocalizar ciudad o zona..."
+                  placeholder="Buscar ciudad o zona guardada..."
                   className="bg-transparent border-none outline-none text-sm flex-1 text-slate-800 placeholder:text-slate-400 font-medium"
                   value={searchQuery}
                   onFocus={() => setShowSearchResults(true)}
@@ -450,8 +453,9 @@ export default function SpatialHub() {
                     setShowSearchResults(true);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchResults.mapPoints.length > 0) {
-                      handleFocusPoint(searchResults.mapPoints[0]);
+                    if (e.key === 'Enter') {
+                      const bestMatch = searchResults.mapPoints[0] || searchResults.saved[0];
+                      if (bestMatch) handleFocusPoint(bestMatch);
                     }
                   }}
                 />
@@ -488,12 +492,12 @@ export default function SpatialHub() {
         <div className="absolute bottom-8 right-8 flex flex-col gap-3 z-30">
           <div className="bg-white border border-slate-200 rounded-2xl p-1 flex flex-col shadow-xl">
             <button 
-              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 0.5, 20)); }}
+              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 1, 20)); }}
               className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-t-xl"
             >+</button>
             <div className="h-[1px] bg-slate-100 mx-2" />
             <button 
-              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.max(prev - 0.5, 5)); }}
+              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.max(prev - 1, 5)); }}
               className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-b-xl"
             >−</button>
           </div>
@@ -502,13 +506,13 @@ export default function SpatialHub() {
         <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
           <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-xl border-l-4 border-l-primary flex gap-8 items-center">
             <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">COORDENADAS</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">POSICIÓN TÁCTICA</p>
               <p className="text-xs font-mono font-bold text-slate-800">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
             </div>
             <div className="w-[1px] h-8 bg-slate-200" />
             <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">ZOOM ANALÍTICO</p>
-              <p className="text-xs font-mono font-bold text-slate-800 uppercase">{mapZoom.toFixed(1)}x</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">ESCALA ANALÍTICA</p>
+              <p className="text-xs font-mono font-bold text-slate-800 uppercase">{Math.round(mapZoom)}x</p>
             </div>
           </div>
         </div>
