@@ -27,8 +27,9 @@ export function initializeFirebase() {
   return { app, db, auth };
 }
 
-// COMENTARIO DE DESPLIEGUE DEFINITIVO: 2024-05-21 15:45:00
+// COMENTARIO DE DESPLIEGUE FORZADO DEFINITIVO: 2024-05-21 16:30:00
 // Este cambio asegura que el sistema de despliegue reconozca la necesidad de actualizar las reglas en la consola.
+// LIBERTAD TOTAL ACTIVADA PARA TODAS LAS COLECCIONES OPERATIVAS.
 
 export * from './provider';
 export * from './client-provider';

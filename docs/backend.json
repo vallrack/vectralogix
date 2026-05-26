@@ -66,19 +66,19 @@
   },
   "firestore": {
     "/zones/{zoneId}": {
-      "schema": "#/backend/entities/Zone",
+      "schema": "Zone",
       "description": "LIBERTAD TOTAL: Acceso permitido para cualquier usuario autenticado."
     },
     "/routes/{routeId}": {
-      "schema": "#/backend/entities/Route",
+      "schema": "Route",
       "description": "LIBERTAD TOTAL: Acceso permitido para cualquier usuario autenticado."
     },
     "/drivers/{driverId}": {
-      "schema": "#/backend/entities/Driver",
+      "schema": "Driver",
       "description": "LIBERTAD TOTAL: Acceso permitido para cualquier usuario autenticado."
     },
     "/orders/{orderId}": {
-      "schema": "#/backend/entities/Order",
+      "schema": "Order",
       "description": "LIBERTAD TOTAL: Acceso permitido para cualquier usuario autenticado."
     }
   }
