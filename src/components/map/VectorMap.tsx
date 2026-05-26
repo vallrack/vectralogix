@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -45,19 +44,19 @@ export function VectorMap({
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRef]);
 
-  // Proyección Web Mercator para sincronización exacta
+  // Web Mercator Projection for exact sync with Google Maps
   const projectPoint = (pLat: number, pLng: number) => {
     if (dimensions.width === 0) return { x: 0, y: 0 };
     
     const worldSize = 256 * Math.pow(2, zoom);
     
-    // Función para obtener la coordenada Y en Mercator
+    // Mercator Y projection
     const latToY = (latitude: number) => {
       const sinLat = Math.sin(latitude * Math.PI / 180);
       return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * worldSize;
     };
 
-    // Función para obtener la coordenada X en Mercator
+    // Mercator X projection
     const lngToX = (longitude: number) => {
       return (longitude + 180) / 360 * worldSize;
     };
@@ -110,7 +109,7 @@ export function VectorMap({
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
-          {/* Zonas Guardadas */}
+          {/* Saved Zones - Rendered with exact projection */}
           {projectedZones.map((zone) => {
             const points = zone.points;
             if (!points || points.length === 0) return null;
@@ -130,7 +129,7 @@ export function VectorMap({
             );
           })}
 
-          {/* Rutas Guardadas */}
+          {/* Saved Routes */}
           {projectedSavedRoutes.map((route) => (
             <g key={route.id} className="opacity-50">
               <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="3" strokeDasharray="8,4" />
@@ -140,7 +139,7 @@ export function VectorMap({
             </g>
           ))}
 
-          {/* Zona en Edición */}
+          {/* Zone currently being drawn */}
           {currentZonePath.length > 0 && (
             <g>
               {currentZonePath.length > 2 ? (
@@ -154,7 +153,7 @@ export function VectorMap({
             </g>
           )}
 
-          {/* Ruta en Edición */}
+          {/* Route currently being drawn */}
           {currentRoutePath.length > 0 && (
             <g>
               {currentRoutePath.length > 1 && (
@@ -162,7 +161,7 @@ export function VectorMap({
               )}
               {currentRoutePath.map((p, i) => (
                 <g key={i}>
-                  <circle cx={p.x} cy={p.y} r="7" fill="#2563eb" stroke="white" strokeWidth="2" />
+                  <circle cx={p.x} cy={p.y} r={activeColor === '#3b82f6' ? '7' : '6'} fill="#2563eb" stroke="white" strokeWidth="2" />
                   <text x={p.x + 10} y={p.y + 4} fill="#2563eb" fontSize="10" fontWeight="900" className="drop-shadow-md">P{i + 1}</text>
                 </g>
               ))}
@@ -170,7 +169,7 @@ export function VectorMap({
           )}
         </svg>
 
-        {/* Mira Central */}
+        {/* Center Crosshair Overlay */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-5">
           <div className="w-40 h-40 border border-primary/20 rounded-full flex items-center justify-center">
             <div className="w-1 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(37,99,235,1)]" />

@@ -19,13 +19,12 @@ import {
   Pencil,
   Eraser,
   Loader2,
-  Hand,
-  AlertTriangle
+  Hand
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, deleteDoc, doc, query } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, query, serverTimestamp } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -64,7 +63,6 @@ export default function SpatialHub() {
 
   const firestore = useFirestore();
   
-  // Consultas simplificadas para evitar errores de índices en el prototipo
   const zonesQuery = useMemo(() => firestore ? query(collection(firestore, 'zones')) : null, [firestore]);
   const routesQuery = useMemo(() => firestore ? query(collection(firestore, 'routes')) : null, [firestore]);
   
@@ -73,7 +71,6 @@ export default function SpatialHub() {
 
   const activeHexColor = useMemo(() => COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6', [selectedColor]);
 
-  // Manejo de navegación manual sincronizada
   const handleMouseDown = (e: React.MouseEvent) => {
     if (activeTool === 'navigate') {
       setIsPanning(true);
@@ -177,11 +174,11 @@ export default function SpatialHub() {
     if (!firestore || isSaving) return;
     
     if (!newZoneName) {
-      toast({ variant: "destructive", title: "Falta Identificador", description: "Asigna un nombre a la zona antes de guardar." });
+      toast({ variant: "destructive", title: "Falta Identificador", description: "Asigna un nombre a la zona." });
       return;
     }
     if (zonePoints.length === 0) {
-      toast({ variant: "destructive", title: "Sin Perímetro", description: "Marca al menos un punto en el mapa para delimitar el área." });
+      toast({ variant: "destructive", title: "Sin Perímetro", description: "Marca al menos un punto en el mapa." });
       return;
     }
 
@@ -199,7 +196,7 @@ export default function SpatialHub() {
       .then(() => {
         toast({ 
           title: "Zona Registrada", 
-          description: `"${newZoneName}" guardada. El mapa se centrará para inspección táctica.`,
+          description: `"${newZoneName}" guardada. Zoom táctico activo.`,
           action: (
             <ToastAction altText="Trazar Ruta" onClick={() => { 
               setActiveTab('rutas'); 
@@ -213,7 +210,7 @@ export default function SpatialHub() {
           )
         });
         
-        // Zoom automático a la zona guardada
+        // Auto Zoom to the first point of the saved zone
         if (zonePoints.length > 0) {
           setMapZoom(16);
           setViewCenter({ lat: zonePoints[0].lat, lng: zonePoints[0].lng });
@@ -242,7 +239,7 @@ export default function SpatialHub() {
       return;
     }
     if (plannedPoints.length < 2) {
-      toast({ variant: "destructive", title: "Ruta Insuficiente", description: "Marca al menos 2 paradas en el mapa." });
+      toast({ variant: "destructive", title: "Ruta Insuficiente", description: "Marca al menos 2 paradas." });
       return;
     }
 
@@ -352,11 +349,11 @@ export default function SpatialHub() {
                 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Buscar Dirección / Lugar</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Buscar Dirección / Punto Referencia</label>
                     <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Ej: Bello la Gabriela"
+                        placeholder="Ej: La Gabriela, Bello"
                         className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-bold"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}

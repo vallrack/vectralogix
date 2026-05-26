@@ -1,7 +1,7 @@
 'use server';
 /**
- * @fileOverview A Genkit flow for geocoding locations and landmarks in Colombia.
- * Handles AI-based coordinate lookup with multi-model redundancy (2.5 Flash -> 1.5 Flash -> 1.5 Pro).
+ * @fileOverview A Genkit flow for geocoding locations and addresses in Colombia.
+ * Handles AI-based coordinate lookup with multi-model redundancy and deep Colombian address knowledge.
  */
 
 import {ai} from '@/ai/genkit';
@@ -17,7 +17,7 @@ const GeocodeOutputSchema = z.object({
   lat: z.number().describe('Latitude of the found location.'),
   lng: z.number().describe('Longitude of the found location.'),
   displayName: z.string().describe('Formatted name of the location.'),
-  zoom: z.number().describe('Suggested zoom level for this location (12-18).'),
+  zoom: z.number().describe('Suggested zoom level for this location (12-19).'),
 });
 
 export type GeocodeOutput = z.infer<typeof GeocodeOutputSchema>;
@@ -41,10 +41,15 @@ const geocodePrompt = ai.definePrompt({
   
   Instructions:
   1. Identify the most likely location in Colombia.
-  2. Provide accurate Latitude and Longitude.
-  3. If it's a neighborhood or specific landmark (like 'La Gabriela' in Bello), suggest a zoom level of 16-17.
-  4. If it's a city or large area, suggest 12-13.
-  5. Return a clean display name.`,
+  2. Handle street addresses accurately (Calles, Carreras, Avenidas, Diagonales).
+  3. Recognize landmarks and neighborhoods (e.g., 'La Gabriela' in Bello, 'El Poblado' in Medellín).
+  4. Provide accurate Latitude and Longitude.
+  5. Suggest zoom level:
+     - Specific street address: 18-19
+     - Neighborhood or specific landmark: 16-17
+     - Large area or sector: 14-15
+     - City: 12-13
+  6. Return a clean display name.`,
 });
 
 const geocodeLocationFlow = ai.defineFlow(
@@ -72,8 +77,7 @@ const geocodeLocationFlow = ai.defineFlow(
         lastError = error;
         console.warn(`Model ${model} failed, trying next...`, error.message);
         
-        // Si es un error de API Key filtrada, el resto de modelos de Google probablemente también fallen,
-        // pero intentamos por si el usuario tiene diferentes cuotas o configuraciones.
+        // If it's a security/leak error, it's likely project-wide, but we try anyway
         if (error.message?.includes('leaked') || error.status === 403) {
           continue;
         }
