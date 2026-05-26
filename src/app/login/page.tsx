@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, ExternalLink, Copy, Check } from 'lucide-react';
+import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -26,21 +26,6 @@ export default function LoginPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [currentHostname, setCurrentHostname] = useState('');
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setCurrentHostname(window.location.hostname);
-    }
-  }, []);
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(currentHostname);
-    setCopied(true);
-    toast({ title: "Copiado", description: "Dominio copiado al portapapeles." });
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +41,7 @@ export default function LoginPage() {
       }
       router.push('/dashboard');
     } catch (error: any) {
-      let errorMessage = error.message;
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `unauthorized-domain:${currentHostname}`;
-      }
-      setAuthError(errorMessage);
+      setAuthError(error.message);
       toast({ 
         variant: "destructive", 
         title: "Fallo de Autenticación", 
@@ -82,21 +63,11 @@ export default function LoginPage() {
       toast({ title: "Google Auth Exitosa", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
-      let errorMessage = "No se pudo completar la autenticación con Google.";
-      
-      if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `unauthorized-domain:${currentHostname}`;
-      } else if (error.code === 'auth/operation-not-allowed') {
-        errorMessage = "El proveedor de Google no está habilitado en Firebase Console.";
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = "La ventana de autenticación fue cerrada.";
-      }
-      
-      setAuthError(errorMessage);
+      setAuthError(error.message);
       toast({ 
         variant: "destructive", 
         title: "Error de Autenticación", 
-        description: error.code || errorMessage 
+        description: error.code || "No se pudo completar la autenticación con Google." 
       });
     } finally {
       setIsLoading(false);
@@ -120,34 +91,7 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {authError && authError.startsWith('unauthorized-domain') ? (
-            <Alert variant="destructive" className="rounded-2xl bg-rose-50 border-rose-100 text-rose-700">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col gap-2">
-                <AlertTitle className="text-xs font-bold uppercase tracking-wider">Dominio No Autorizado</AlertTitle>
-                <AlertDescription className="text-[11px] leading-relaxed">
-                  Copia el dominio abajo y agrégalo a los "Dominios autorizados" en tu consola de Firebase.
-                </AlertDescription>
-                <div className="mt-1 p-2 bg-white rounded-xl border border-rose-200 flex items-center justify-between gap-2 shadow-sm">
-                  <code className="text-[10px] font-mono text-slate-600 truncate flex-1">{currentHostname}</code>
-                  <button 
-                    onClick={copyToClipboard}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-primary"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <a 
-                  href={`https://console.firebase.google.com/project/${auth.app.options.projectId}/authentication/settings`}
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="mt-1 flex items-center justify-center gap-2 py-2 px-4 bg-primary text-white text-[10px] font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md"
-                >
-                  ABRIR CONFIGURACIÓN DE FIREBASE <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </Alert>
-          ) : authError && (
+          {authError && (
             <Alert variant="destructive" className="rounded-2xl">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
@@ -157,7 +101,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleEmailAuth} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Terminal de Acceso (Email)</Label>
+              <Label htmlFor="email" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Email del Operador</Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
@@ -172,7 +116,7 @@ export default function LoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Clave Operativa</Label>
+              <Label htmlFor="password" className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Clave de Acceso</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <Input 
@@ -209,7 +153,7 @@ export default function LoginPage() {
               <span className="w-full border-t border-slate-200" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
-              <span className="bg-white px-4 text-slate-400">Validación Externa</span>
+              <span className="bg-white px-4 text-slate-400">O ingresa con</span>
             </div>
           </div>
 
