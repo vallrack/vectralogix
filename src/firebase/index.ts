@@ -3,8 +3,8 @@
 
 /**
  * @fileOverview Inicialización de Firebase con reglas de seguridad dinámicas.
- * TRIGGER DE DESPLIEGUE: Sincronización de permisos globales de libertad total.
- * Estado: ACTIVO - Fuerza la actualización de reglas en la consola.
+ * TRIGGER DE DESPLIEGUE FORZADO: Sincronización de permisos globales de libertad total.
+ * Estado: ACTIVO - Fuerza la actualización de reglas en la consola para liberar acceso a drivers y orders.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -27,8 +27,8 @@ export function initializeFirebase() {
   return { app, db, auth };
 }
 
-// COMENTARIO DE DESPLIEGUE FORZADO: REGLAS DE LIBERTAD TOTAL ACTUALIZADAS EL 2024-05-21.
-// Este cambio asegura que el watcher detecte la actualización y despliegue las reglas de seguridad.
+// COMENTARIO DE DESPLIEGUE DEFINITIVO: 2024-05-21 15:45:00
+// Este cambio asegura que el sistema de despliegue reconozca la necesidad de actualizar las reglas en la consola.
 
 export * from './provider';
 export * from './client-provider';

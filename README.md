@@ -5,28 +5,40 @@ Este es el centro de mando operativo de VectraLogix, diseñado para la gestión 
 
 ## Características Principales
 
-- **Spatial Hub**: Cartografía táctica con trazado de nodos y perímetros geográficos con precisión de píxel.
-- **Snapshots Tácticos**: Captura de zonas con niveles de zoom específicos (hasta 21x) para exploración urbana detallada.
-- **Inteligencia de Rutas**: Generación de secuencias optimizadas mediante IA redundante (Gemini Flash & Pro).
-- **Gestión de Flota**: Control detallado de unidades y operadores en tiempo real.
-- **Seguridad**: Autenticación integrada con Firebase (Google & Email/Password).
+- **Spatial Hub**: Cartografía táctica con trazado de nodos y perímetros geográficos.
+- **Auto-Rutas**: Generación de secuencias optimizadas mediante un **Ejército de IA Redundante** (Gemini 2.5 Flash, 1.5 Flash & Pro).
+- **Gestión de Flota & Pedidos**: Control total de unidades y entregas con libertad de permisos en Firestore.
+- **Seguridad**: Autenticación integrada con Firebase.
 
 ## Instrucciones para GitHub
 
 Para subir este proyecto a tu repositorio de GitHub, abre una terminal en la raíz del proyecto y ejecuta los siguientes comandos:
 
 ```bash
+# 1. Inicializar el repositorio
 git init
+
+# 2. Agregar todos los archivos
 git add .
-git commit -m "feat: Initial commit for VectraLogix Hub - Full Security & AI Army"
+
+# 3. Crear el primer commit con todas las mejoras de IA y Seguridad
+git commit -m "feat: Initial commit for VectraLogix Hub - Redundant AI Army & Total Freedom Rules"
+
+# 4. Crear y cambiar a la rama principal
 git branch -M main
-git remote add origin https://github.com/vallrack/vectralogix.git
+
+# 5. Vincular con tu repositorio remoto (reemplaza con tu URL)
+git remote add origin https://github.com/tu-usuario/vectralogix.git
+
+# 6. Subir los cambios
 git push -u origin main
 ```
 
-## Despliegue
+## Configuración de Dominio (CRÍTICO)
 
-Una vez vinculado a GitHub, puedes conectar este repositorio a **Firebase App Hosting** para habilitar despliegues automáticos. Recuerda autorizar tu dominio en la consola de Firebase > Authentication > Settings > Authorized domains.
+Si experimentas el error `auth/unauthorized-domain`, debes añadir el dominio de tu estación de trabajo en la consola de Firebase:
+1. Ve a **Firebase Console** > **Authentication** > **Settings**.
+2. En la pestaña **Authorized domains**, añade el dominio que aparece en tu barra de navegación (ej: `6000-firebase-studio...cloudworkstations.dev`).
 
 ---
 Desarrollado con Next.js, Genkit y Firebase.
