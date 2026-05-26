@@ -292,7 +292,7 @@ export default function SpatialHub() {
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteDoc(doc(firestore!, 'zones', zone.id));
+                              if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
                             }} 
                             className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
                           >
