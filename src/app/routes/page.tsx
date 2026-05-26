@@ -228,3 +228,12 @@ function ResultStat({ label, value, color }: any) {
     </div>
   );
 }
+
+function ResultStatItem({ label, value, color }: any) {
+  return (
+    <div className="glass-panel p-6 rounded-3xl bg-white border-slate-100">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+      <p className={cn("text-3xl font-headline font-bold", `text-${color}`)}>{value}</p>
+    </div>
+  );
+}

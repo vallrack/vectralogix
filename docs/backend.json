@@ -67,19 +67,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Zonas de cobertura."
+      "description": "Zonas de cobertura. Permitir lectura/escritura a usuarios autenticados."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Rutas optimizadas."
+      "description": "Rutas optimizadas. Permitir lectura/escritura a usuarios autenticados."
     },
     "/drivers/{driverId}": {
       "schema": "#/backend/entities/Driver",
-      "description": "Personal de flota."
+      "description": "Personal de flota. Permitir lectura/escritura a usuarios autenticados."
     },
     "/orders/{orderId}": {
       "schema": "#/backend/entities/Order",
-      "description": "Pedidos operativos."
+      "description": "Pedidos operativos. Permitir lectura/escritura a usuarios autenticados."
     }
   }
 }
