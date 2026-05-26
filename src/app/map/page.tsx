@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -85,7 +84,7 @@ export default function SpatialHub() {
   const handleFocusPoint = (point: any) => {
     const lat = point.lat || (point.coordinates && point.coordinates[0]?.lat);
     const lng = point.lng || (point.coordinates && point.coordinates[0]?.lng);
-    const targetZoom = point.zoom || 18.5; // Zoom profundo para ver edificios
+    const targetZoom = point.zoom || 18.5; 
     
     if (lat !== undefined && lng !== undefined) {
       setViewCenter({ lat, lng });
@@ -123,7 +122,6 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Proyección de mercator simplificada para clics
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -154,13 +152,12 @@ export default function SpatialHub() {
     setIsSaving(true);
     const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
     
-    // Guardamos la zona con el zoom actual para permitir el "pantallazo" posterior
     const zoneData = {
       name: newZoneName,
       type: activeTool,
       color: colorHex,
       coordinates: [{ lat: viewCenter.lat, lng: viewCenter.lng }],
-      zoom: mapZoom > 17 ? mapZoom : 18.5, // Aseguramos zoom profundo
+      zoom: mapZoom > 17 ? mapZoom : 18.5, 
       createdAt: serverTimestamp()
     };
 
@@ -170,7 +167,7 @@ export default function SpatialHub() {
           title: "Zona Registrada", 
           description: "Perímetro guardado con snapshot de alta resolución." 
         });
-        setMapZoom(19); // Zoom máximo al guardar para inspección inmediata
+        setMapZoom(19); 
         setNewZoneName('');
       })
       .catch(async () => {
