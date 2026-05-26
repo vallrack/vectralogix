@@ -11,7 +11,7 @@
         "type": { "type": "string", "enum": ["polygon", "rect", "circle"] },
         "color": { "type": "string" },
         "coordinates": { "type": "array", "description": "Lista de puntos lat/lng que definen la zona." },
-        "zoom": { "type": "number", "description": "Nivel de zoom guardado para esta zona." },
+        "zoom": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "type", "color", "coordinates"]
@@ -29,6 +29,36 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "stops"]
+    },
+    "Driver": {
+      "title": "Conductor de Flota",
+      "description": "Información del operador y su vehículo.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "vehicleType": { "type": "string", "enum": ["car", "van", "truck", "motorcycle"] },
+        "isAvailable": { "type": "boolean" },
+        "performance": { "type": "number" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "vehicleType", "isAvailable"]
+    },
+    "Order": {
+      "title": "Pedido Logístico",
+      "description": "Detalles del envío y destino.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "address": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "in-transit", "delivered", "cancelled"] },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "address", "status"]
     }
   },
   "auth": {
@@ -37,11 +67,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Colección de zonas delimitadas. Requiere autenticación."
+      "description": "Zonas de cobertura."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Colección de rutas trazadas y guardadas. Requiere autenticación."
+      "description": "Rutas optimizadas."
+    },
+    "/drivers/{driverId}": {
+      "schema": "#/backend/entities/Driver",
+      "description": "Personal de flota."
+    },
+    "/orders/{orderId}": {
+      "schema": "#/backend/entities/Order",
+      "description": "Pedidos operativos."
     }
   }
 }

@@ -1,8 +1,11 @@
+
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { KPICards } from '@/components/dashboard/KPICards';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query } from 'firebase/firestore';
 import { 
   AreaChart, 
   Area, 
@@ -12,11 +15,18 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { MOCK_STATS, MOCK_DRIVERS } from '@/lib/mock-data';
-import { Bell, Search, MoreHorizontal, ArrowUpRight } from 'lucide-react';
+import { MOCK_STATS } from '@/lib/mock-data';
+import { Bell, Search, MoreHorizontal, ArrowUpRight, Loader2 } from 'lucide-react';
 
 export default function Dashboard() {
-  const sortedDrivers = [...MOCK_DRIVERS].sort((a, b) => b.performance - a.performance);
+  const firestore = useFirestore();
+  const driversQuery = useMemo(() => firestore ? query(collection(firestore, 'drivers')) : null, [firestore]);
+  const { data: drivers, loading: loadingDrivers } = useCollection(driversQuery);
+
+  const sortedDrivers = useMemo(() => 
+    (drivers || []).sort((a, b) => (b.performance || 0) - (a.performance || 0)).slice(0, 5),
+    [drivers]
+  );
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden font-body">
@@ -31,7 +41,7 @@ export default function Dashboard() {
               <input 
                 type="text" 
                 placeholder="Buscar flota, rutas o zonas..." 
-                className="bg-background border border-slate-200/60 rounded-xl py-2 pl-10 pr-4 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                className="bg-background border border-slate-200/60 rounded-xl py-2 pl-10 pr-4 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
               />
             </div>
           </div>
@@ -58,15 +68,15 @@ export default function Dashboard() {
           <KPICards />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 glass-panel p-8 rounded-3xl">
+            <div className="lg:col-span-2 glass-panel p-8 rounded-3xl bg-white shadow-sm border-slate-100">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h3 className="text-lg font-headline font-bold text-slate-900">Inteligencia de Volumen</h3>
-                  <p className="text-sm text-slate-500">Métricas históricas y carga predictiva.</p>
+                  <p className="text-sm text-slate-500 font-medium">Métricas históricas y carga predictiva.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-4 py-1.5 rounded-lg border border-slate-200/60 text-xs font-bold hover:bg-slate-200/50 text-slate-600 transition-colors">SEMANAL</button>
-                  <button className="px-4 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20">MENSUAL</button>
+                  <button className="px-4 py-1.5 rounded-lg border border-slate-200/60 text-[10px] font-black hover:bg-slate-200/50 text-slate-400 transition-colors">SEMANAL</button>
+                  <button className="px-4 py-1.5 rounded-lg bg-primary text-white text-[10px] font-black shadow-lg shadow-primary/20">MENSUAL</button>
                 </div>
               </div>
               
@@ -79,58 +89,66 @@ export default function Dashboard() {
                         <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 12}} 
+                      tick={{fill: '#94a3b8', fontSize: 11, fontWeight: '600'}} 
                       dy={10}
                     />
                     <YAxis 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{fill: '#94a3b8', fontSize: 12}}
+                      tick={{fill: '#94a3b8', fontSize: 11, fontWeight: '600'}}
                     />
                     <Tooltip 
-                      contentStyle={{backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                      contentStyle={{backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'}}
                     />
-                    <Area type="monotone" dataKey="completed" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorActive)" />
+                    <Area type="monotone" dataKey="completed" stroke="#2563eb" strokeWidth={4} fillOpacity={1} fill="url(#colorActive)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="glass-panel p-8 rounded-3xl">
+            <div className="glass-panel p-8 rounded-3xl bg-white shadow-sm border-slate-100">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-lg font-headline font-bold text-slate-900">Flota Élite</h3>
+                <h3 className="text-lg font-headline font-bold text-slate-900 uppercase tracking-tight">Flota Élite</h3>
                 <MoreHorizontal className="w-5 h-5 text-slate-400 cursor-pointer" />
               </div>
               
               <div className="space-y-6">
-                {sortedDrivers.map((driver, i) => (
-                  <div key={driver.id} className="flex items-center justify-between group cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <img src={driver.avatar} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-card shadow-sm" alt="" />
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-card border-2 border-primary rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
-                          {i + 1}
+                {loadingDrivers ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                ) : sortedDrivers.length > 0 ? (
+                  sortedDrivers.map((driver, i) => (
+                    <div key={driver.id} className="flex items-center justify-between group cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-2xl transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                            <img src={`https://picsum.photos/seed/${driver.id}/100/100`} className="w-full h-full object-cover rounded-2xl" alt="" />
+                          </div>
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-white border-2 border-primary rounded-full flex items-center justify-center text-[10px] font-black text-primary">
+                            {i + 1}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors truncate max-w-[120px]">{driver.name}</p>
+                          <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black">{driver.vehicleType}</p>
                         </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 group-hover:text-primary transition-colors">{driver.name}</p>
-                        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">{driver.vehicleType}</p>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-primary">{driver.performance}%</p>
+                        <p className="text-[9px] text-slate-400 uppercase font-black">Rating</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-primary">{driver.performance}%</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Rating</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-slate-300 text-xs font-bold uppercase tracking-widest">Sin flota registrada</div>
+                )}
               </div>
 
-              <button className="w-full mt-8 py-3 rounded-2xl bg-slate-200/40 border border-slate-200/60 text-sm font-bold text-slate-600 hover:bg-slate-200/80 transition-all flex items-center justify-center gap-2">
+              <button className="w-full mt-8 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-[10px] font-black text-slate-500 hover:bg-slate-100 transition-all flex items-center justify-center gap-2 uppercase tracking-widest">
                 VER TODA LA FLOTA
                 <ArrowUpRight className="w-4 h-4" />
               </button>

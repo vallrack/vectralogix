@@ -1,13 +1,14 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 import { 
   BrainCircuit, 
   MapPin, 
   Plus, 
-  Play, 
   Info, 
   Clock, 
   Route as RouteIcon,
@@ -15,33 +16,59 @@ import {
   Sparkles,
   Timer,
   Navigation,
-  CheckCircle2
+  CheckCircle2,
+  Loader2,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { generateOptimizedDeliveryRoute } from '@/ai/flows/optimized-delivery-route-generation';
-import { MOCK_LOCATIONS, MOCK_DRIVERS } from '@/lib/mock-data';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 export default function RoutePlanning() {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+
+  const firestore = useFirestore();
+  const ordersQuery = useMemo(() => firestore ? query(collection(firestore, 'orders'), where('status', '==', 'pending')) : null, [firestore]);
+  const { data: pendingOrders, loading: loadingOrders } = useCollection(ordersQuery);
 
   const handleOptimize = async () => {
+    if (selectedOrderIds.length === 0) {
+      toast({ variant: "destructive", title: "Sin Destinos", description: "Selecciona al menos un pedido para optimizar." });
+      return;
+    }
+
     setIsOptimizing(true);
     try {
-      // Use the Genkit flow with mock data
+      const ordersToOptimize = (pendingOrders || []).filter(o => selectedOrderIds.includes(o.id));
+      
       const data = await generateOptimizedDeliveryRoute({
-        deliveryLocations: MOCK_LOCATIONS.slice(1).map(l => ({ lat: l.lat, lng: l.lng, address: l.address })),
-        startLocation: { lat: MOCK_LOCATIONS[0].lat, lng: MOCK_LOCATIONS[0].lng, address: MOCK_LOCATIONS[0].address },
+        deliveryLocations: ordersToOptimize.map(o => ({ 
+          lat: o.lat || 4.6097, 
+          lng: o.lng || -74.0817, 
+          address: o.address 
+        })),
+        startLocation: { lat: 4.6097, lng: -74.0817, address: 'Centro de Distribución Vectra' },
         vehicleCapacity: 50,
         averageVehicleSpeedKmh: 45,
       });
       setResult(data);
+      toast({ title: "Ruta Optimizada", description: "La IA ha generado la secuencia más eficiente." });
     } catch (error) {
       console.error(error);
+      toast({ variant: "destructive", title: "Error de IA", description: "No se pudo generar la optimización." });
     } finally {
       setIsOptimizing(false);
     }
+  };
+
+  const toggleOrderSelection = (id: string) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(id) ? prev.filter(oid => oid !== id) : [...prev, id]
+    );
   };
 
   return (
@@ -51,54 +78,61 @@ export default function RoutePlanning() {
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-start mb-12">
           <div>
-            <h1 className="text-3xl font-headline font-bold mb-2">Auto-Route Intelligence</h1>
-            <p className="text-muted-foreground">Autonomous pathfinding powered by neural logistics.</p>
+            <h1 className="text-3xl font-headline font-bold mb-2 text-slate-900">Auto-Route Intelligence</h1>
+            <p className="text-muted-foreground font-medium">Planificación autónoma basada en IA para pedidos pendientes.</p>
           </div>
           <div className="flex gap-4">
-            <button className="glass-panel px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-white/5 transition-all font-bold text-sm">
-              <Info className="w-4 h-4" />
-              GUIDELINES
-            </button>
-            <button 
+            <Button 
               onClick={handleOptimize}
-              disabled={isOptimizing}
-              className="bg-primary px-8 py-3 rounded-2xl text-white font-bold text-sm shadow-xl shadow-primary/30 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+              disabled={isOptimizing || selectedOrderIds.length === 0}
+              className="bg-primary px-8 py-6 rounded-2xl text-white font-bold text-sm shadow-xl shadow-primary/30 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 h-auto"
             >
-              {isOptimizing ? <Sparkles className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
-              {isOptimizing ? 'PROCESSING...' : 'RUN OPTIMIZER'}
-            </button>
+              {isOptimizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
+              {isOptimizing ? 'PROCESANDO...' : 'EJECUTAR OPTIMIZADOR'}
+            </Button>
           </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          {/* Stops Configuration */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="glass-panel p-8 rounded-3xl">
+            <div className="glass-panel p-8 rounded-3xl bg-white">
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-lg font-headline font-bold">Planned Stops</h3>
-                <button className="p-2 bg-primary/20 rounded-xl hover:bg-primary/30 transition-colors">
-                  <Plus className="w-5 h-5 text-primary" />
-                </button>
+                <h3 className="text-lg font-headline font-bold text-slate-900">Pedidos Pendientes</h3>
+                <Badge variant="outline" className="text-primary font-bold">{pendingOrders?.length || 0}</Badge>
               </div>
 
-              <div className="space-y-4 relative">
-                {/* Visual Line Connectors */}
-                <div className="absolute left-[21px] top-6 bottom-6 w-0.5 bg-white/5" />
-                
-                {MOCK_LOCATIONS.map((loc, i) => (
-                  <div key={loc.id} className="flex items-center gap-4 relative">
-                    <div className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center border border-white/10 z-10",
-                      i === 0 ? "bg-primary/20 text-primary" : "bg-white/5 text-muted-foreground"
-                    )}>
-                      {i === 0 ? <Navigation className="w-5 h-5" /> : <span className="text-xs font-bold">{i}</span>}
+              <div className="space-y-3">
+                {loadingOrders ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                ) : pendingOrders && pendingOrders.length > 0 ? (
+                  pendingOrders.map((order) => (
+                    <div 
+                      key={order.id} 
+                      onClick={() => toggleOrderSelection(order.id)}
+                      className={cn(
+                        "flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all border group",
+                        selectedOrderIds.includes(order.id) 
+                          ? "bg-primary/10 border-primary shadow-sm" 
+                          : "bg-slate-50 border-slate-100 hover:border-primary/20"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center transition-colors",
+                        selectedOrderIds.includes(order.id) ? "bg-primary text-white" : "bg-white text-slate-300 group-hover:text-primary"
+                      )}>
+                        <Package className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-xs font-bold text-slate-800 truncate">{order.customerName}</p>
+                        <p className="text-[10px] text-slate-400 font-bold truncate uppercase">{order.address}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl hover:border-primary/30 transition-colors cursor-pointer group">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-0.5">{i === 0 ? 'Origin' : `Stop ${i}`}</p>
-                      <p className="text-sm font-bold truncate group-hover:text-foreground transition-colors">{loc.address}</p>
-                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                    Sin pedidos para procesar
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -108,22 +142,21 @@ export default function RoutePlanning() {
                   <Timer className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase">Optimizer Engine</p>
-                  <p className="text-sm font-bold">Latency: 42ms | Tokens: 1.2k</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motor de IA</p>
+                  <p className="text-sm font-bold text-slate-800">Gemini 2.5 Flash Activo</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* AI Result View */}
           <div className="lg:col-span-2">
             {!result ? (
-              <div className="h-full min-h-[500px] glass-panel border-dashed border-2 border-white/10 rounded-[40px] flex flex-col items-center justify-center p-12 text-center group">
-                <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
-                  <BrainCircuit className="w-12 h-12 text-muted-foreground/30" />
+              <div className="h-full min-h-[500px] glass-panel border-dashed border-2 border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-center group bg-white/30 backdrop-blur-sm">
+                <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
+                  <BrainCircuit className="w-12 h-12 text-slate-300" />
                 </div>
-                <h3 className="text-xl font-headline font-bold mb-2">Neural Link Ready</h3>
-                <p className="text-muted-foreground max-w-xs">Initialize the optimizer to generate autonomous route sequences based on current fleet telemetry.</p>
+                <h3 className="text-xl font-headline font-bold mb-2 text-slate-900">Configuración Requerida</h3>
+                <p className="text-slate-500 max-w-xs font-medium">Selecciona los pedidos de la lista lateral para generar la secuencia autónoma de entrega.</p>
               </div>
             ) : (
               <motion.div 
@@ -131,67 +164,66 @@ export default function RoutePlanning() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-8"
               >
-                {/* Results Header */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="glass-panel p-6 rounded-3xl">
-                    <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Total Distance</p>
-                    <p className="text-3xl font-headline font-bold text-primary">{result.totalDistanceKm.toFixed(1)} <span className="text-sm font-medium text-muted-foreground">KM</span></p>
-                  </div>
-                  <div className="glass-panel p-6 rounded-3xl">
-                    <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Est. Travel Time</p>
-                    <p className="text-3xl font-headline font-bold text-accent">{result.estimatedTravelTimeMinutes} <span className="text-sm font-medium text-muted-foreground">MIN</span></p>
-                  </div>
-                  <div className="glass-panel p-6 rounded-3xl">
-                    <p className="text-xs font-bold text-muted-foreground uppercase mb-2">Optimization Confidence</p>
-                    <p className="text-3xl font-headline font-bold text-green-500">99.2%</p>
-                  </div>
+                  <ResultStat label="Distancia Total" value={`${result.totalDistanceKm.toFixed(1)} KM`} color="primary" />
+                  <ResultStat label="Tiempo Estimado" value={`${result.estimatedTravelTimeMinutes} MIN`} color="accent" />
+                  <ResultStat label="Eficiencia IA" value="98.5%" color="green-500" />
                 </div>
 
-                {/* Detailed Sequence */}
-                <div className="glass-panel p-8 rounded-[40px]">
-                  <h3 className="text-xl font-headline font-bold mb-8 flex items-center gap-3">
+                <div className="glass-panel p-8 rounded-[40px] bg-white">
+                  <h3 className="text-xl font-headline font-bold mb-8 flex items-center gap-3 text-slate-900">
                     <CheckCircle2 className="w-6 h-6 text-green-500" />
-                    Optimized Sequence
+                    Secuencia Optimizada
                   </h3>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-3 relative">
+                    <div className="absolute left-[20px] top-6 bottom-6 w-0.5 bg-slate-100" />
                     {result.optimizedSequence.map((stop: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-5 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all cursor-default">
+                      <div key={idx} className="flex items-center justify-between p-5 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-white hover:border-primary/20 transition-all cursor-default relative z-10">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-background border border-white/10 flex items-center justify-center text-xs font-bold">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xs font-black text-primary shadow-sm">
                             {idx + 1}
                           </div>
                           <div>
-                            <p className="text-sm font-bold">{stop.address}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{stop.lat.toFixed(4)}, {stop.lng.toFixed(4)}</p>
+                            <p className="text-sm font-bold text-slate-800">{stop.address}</p>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Punto Georeferenciado</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {idx === 0 && <span className="text-[10px] font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase">Start</span>}
-                          {idx === result.optimizedSequence.length - 1 && <span className="text-[10px] font-bold bg-accent/20 text-accent px-2 py-0.5 rounded-full uppercase">Terminal</span>}
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+                          {idx === 0 && <span className="text-[9px] font-black bg-primary/10 text-primary px-3 py-1 rounded-full uppercase tracking-tighter">Origen</span>}
+                          {idx === result.optimizedSequence.length - 1 && <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full uppercase tracking-tighter">Cierre</span>}
+                          <ChevronRight className="w-4 h-4 text-slate-200" />
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="mt-8 pt-8 border-t border-white/5">
-                    <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-4">AI Log & Notes</h4>
-                    <div className="bg-black/40 rounded-2xl p-6 font-mono text-xs text-primary/80 leading-relaxed border border-primary/10">
+                  <div className="mt-8 pt-8 border-t border-slate-100">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Registro de Optimización</h4>
+                    <div className="bg-slate-900 rounded-2xl p-6 font-mono text-xs text-primary leading-relaxed border border-white/10 shadow-2xl">
                       {result.optimizationNotes}
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex gap-4">
-                  <button className="flex-1 py-5 bg-white/5 border border-white/10 rounded-2xl font-bold text-sm hover:bg-white/10 transition-all">DISCARD</button>
-                  <button className="flex-1 py-5 bg-primary text-white rounded-2xl font-bold text-sm shadow-xl shadow-primary/30 hover:translate-y-[-2px] transition-all">CONFIRM & DEPLOY ROUTE</button>
+                  <Button variant="outline" onClick={() => setResult(null)} className="flex-1 py-7 rounded-2xl font-bold border-slate-200">DESCARTAR</Button>
+                  <Button className="flex-1 py-7 rounded-2xl font-bold shadow-xl shadow-primary/20">CONFIRMAR Y DESPACHAR</Button>
                 </div>
               </motion.div>
             )}
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+function ResultStat({ label, value, color }: any) {
+  return (
+    <div className="glass-panel p-6 rounded-3xl bg-white border-slate-100">
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+      <p className={cn("text-3xl font-headline font-bold", `text-${color}`)}>{value}</p>
     </div>
   );
 }
