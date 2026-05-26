@@ -1,0 +1,46 @@
+
+{
+  "entities": {
+    "Zone": {
+      "title": "Zona Geográfica",
+      "description": "Representa una zona delimitada en el mapa por el usuario.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["polygon", "rect", "circle"] },
+        "color": { "type": "string" },
+        "coordinates": { "type": "array", "description": "Lista de puntos lat/lng que definen la zona." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "type", "color", "coordinates"]
+    },
+    "Route": {
+      "title": "Ruta de Entrega",
+      "description": "Una secuencia de puntos trazada para una entrega.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "stops": { "type": "array" },
+        "distance": { "type": "number" },
+        "duration": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "stops"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/zones/{zoneId}": {
+      "schema": "#/backend/entities/Zone",
+      "description": "Colección de zonas delimitadas."
+    },
+    "/routes/{routeId}": {
+      "schema": "#/backend/entities/Route",
+      "description": "Colección de rutas trazadas y guardadas."
+    }
+  }
+}
