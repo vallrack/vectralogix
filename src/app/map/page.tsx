@@ -125,7 +125,7 @@ export default function SpatialHub() {
       .then(() => {
         toast({ title: "Zona Estratégica Guardada", description: "Perímetro registrado y enfocado." });
         setNewZoneName('');
-        setMapZoom(17); // Zoom automático tras guardar zona
+        setMapZoom(17); 
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -146,6 +146,16 @@ export default function SpatialHub() {
     };
     setPlannedPoints([...plannedPoints, newPoint]);
     toast({ title: "Punto de Ruta Fijado", description: "El nodo ha sido añadido a la planeación actual." });
+  };
+
+  // Manejador de scroll para el mapa
+  const handleWheel = (e: React.WheelEvent) => {
+    const delta = e.deltaY;
+    if (delta > 0) {
+      setMapZoom(prev => Math.max(prev - 1, 5));
+    } else {
+      setMapZoom(prev => Math.min(prev + 1, 18));
+    }
   };
 
   return (
@@ -393,7 +403,10 @@ export default function SpatialHub() {
         </div>
       </aside>
       
-      <main className="flex-1 relative bg-[#05070A] overflow-hidden">
+      <main 
+        className="flex-1 relative bg-[#05070A] overflow-hidden"
+        onWheel={handleWheel}
+      >
         <VectorMap 
           lat={viewCenter.lat} 
           lng={viewCenter.lng} 
