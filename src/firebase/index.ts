@@ -1,9 +1,8 @@
-
 'use client';
 
 /**
- * @fileOverview Inicialización central de Firebase con soporte para reglas de seguridad abiertas para operadores.
- * Reglas aplicadas: allow read, write: if request.auth != null; para todas las colecciones.
+ * @fileOverview Inicialización de Firebase con reglas de seguridad abiertas para operadores.
+ * Reglas: allow read, write: if request.auth != null; para todas las colecciones.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
