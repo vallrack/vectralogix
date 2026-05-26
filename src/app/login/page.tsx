@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle } from 'lucide-react';
+import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, Info } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
       toast({ 
         variant: "destructive", 
         title: "Fallo de Autenticación", 
-        description: "Verifica tus credenciales e intenta de nuevo." 
+        description: error.message || "Verifica tus credenciales e intenta de nuevo." 
       });
     } finally {
       setIsLoading(false);
@@ -56,20 +56,30 @@ export default function LoginPage() {
     setIsLoading(true);
     setAuthError(null);
     const provider = new GoogleAuthProvider();
+    // Forzar la selección de cuenta para depuración
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
       await signInWithPopup(auth, provider);
       toast({ title: "Google Auth Exitosa", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
-      let errorMessage = error.message;
+      console.error("Firebase Auth Error:", error);
+      let errorMessage = "No se pudo completar la autenticación con Google.";
+      
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "Dominio no autorizado. Asegúrate de que " + window.location.hostname + " esté en la lista blanca de Firebase Console.";
+        errorMessage = "Dominio no autorizado. Agrega " + window.location.hostname + " en Firebase Console > Auth > Settings.";
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = "El proveedor de Google no está habilitado en Firebase Console.";
+      } else if (error.message.includes('invalid-action')) {
+        errorMessage = "Acción inválida. Verifica que Google Auth esté configurado correctamente con un correo de soporte.";
       }
+      
       setAuthError(errorMessage);
       toast({ 
         variant: "destructive", 
-        title: "Error de Google", 
-        description: "No se pudo completar la autenticación externa." 
+        title: "Error de Google Auth", 
+        description: errorMessage 
       });
     } finally {
       setIsLoading(false);
@@ -96,7 +106,7 @@ export default function LoginPage() {
           {authError && (
             <Alert variant="destructive" className="rounded-2xl bg-rose-50 border-rose-100 text-rose-700">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Error de Seguridad</AlertTitle>
+              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Estado de Seguridad</AlertTitle>
               <AlertDescription className="text-[11px] leading-relaxed">
                 {authError}
               </AlertDescription>
@@ -175,6 +185,13 @@ export default function LoginPage() {
             </svg>
             AUTENTICACIÓN GOOGLE
           </Button>
+          
+          <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-[10px] text-blue-600 leading-relaxed">
+              <strong>Tip:</strong> Si ves un error de "Invalid Action", asegúrate de haber activado el proveedor de Google en tu consola de Firebase y de haber agregado un correo de soporte en la configuración del proyecto.
+            </p>
+          </div>
         </CardContent>
         <CardFooter className="pb-10 flex justify-center">
           <button 
