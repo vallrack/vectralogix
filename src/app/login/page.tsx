@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, Info, ExternalLink } from 'lucide-react';
+import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, Info, ExternalLink, Copy, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -27,10 +27,20 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [currentHostname, setCurrentHostname] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    setCurrentHostname(window.location.hostname);
+    if (typeof window !== 'undefined') {
+      setCurrentHostname(window.location.hostname);
+    }
   }, []);
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(currentHostname);
+    setCopied(true);
+    toast({ title: "Copiado", description: "Dominio copiado al portapapeles." });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,11 +56,16 @@ export default function LoginPage() {
       }
       router.push('/dashboard');
     } catch (error: any) {
-      setAuthError(error.message);
+      console.error(error);
+      let errorMessage = error.message;
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = `Dominio no autorizado: ${currentHostname}`;
+      }
+      setAuthError(errorMessage);
       toast({ 
         variant: "destructive", 
         title: "Fallo de Autenticación", 
-        description: error.message || "Verifica tus credenciales e intenta de nuevo." 
+        description: error.code || "Error al procesar la solicitud." 
       });
     } finally {
       setIsLoading(false);
@@ -68,10 +83,11 @@ export default function LoginPage() {
       toast({ title: "Google Auth Exitosa", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
+      console.error(error);
       let errorMessage = "No se pudo completar la autenticación con Google.";
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `Dominio no autorizado. Debes agregar "${currentHostname}" a la lista de dominios autorizados en Firebase Console > Authentication > Settings.`;
+        errorMessage = `Dominio no autorizado. Debes agregar "${currentHostname}" a la lista de dominios autorizados en Firebase.`;
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "El proveedor de Google no está habilitado en Firebase Console.";
       } else if (error.code === 'auth/popup-closed-by-user') {
@@ -106,29 +122,38 @@ export default function LoginPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {authError && (
+          {authError && authError.includes('unauthorized-domain') ? (
             <Alert variant="destructive" className="rounded-2xl bg-rose-50 border-rose-100 text-rose-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              <div className="flex flex-col gap-1">
-                <AlertTitle className="text-xs font-bold uppercase tracking-wider">Estado de Seguridad</AlertTitle>
+              <div className="flex flex-col gap-2">
+                <AlertTitle className="text-xs font-bold uppercase tracking-wider">Acción Requerida</AlertTitle>
                 <AlertDescription className="text-[11px] leading-relaxed">
-                  {authError}
+                  Este entorno no está autorizado en Firebase. Copia el dominio abajo y agrégalo en la consola.
                 </AlertDescription>
-                {authError.includes('unauthorized-domain') && (
-                  <div className="mt-2 p-2 bg-white/50 rounded-lg border border-rose-200">
-                    <p className="text-[10px] font-bold text-rose-800 mb-1">Copia este dominio:</p>
-                    <code className="text-[10px] bg-rose-100 px-2 py-1 rounded block truncate font-mono">{currentHostname}</code>
-                    <a 
-                      href="https://console.firebase.google.com/project/_/authentication/settings" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="mt-2 flex items-center gap-1 text-[9px] font-bold text-primary hover:underline"
-                    >
-                      Ir a Firebase Console <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  </div>
-                )}
+                <div className="mt-1 p-2 bg-white rounded-xl border border-rose-200 flex items-center justify-between gap-2 shadow-sm">
+                  <code className="text-[10px] font-mono text-slate-600 truncate flex-1">{currentHostname}</code>
+                  <button 
+                    onClick={copyToClipboard}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-primary"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <a 
+                  href={`https://console.firebase.google.com/project/${auth.app.options.projectId}/authentication/settings`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="mt-1 flex items-center justify-center gap-2 py-2 px-4 bg-primary text-white text-[10px] font-bold rounded-xl hover:bg-primary/90 transition-all shadow-md"
+                >
+                  ABRIR FIREBASE CONSOLE <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
+            </Alert>
+          ) : authError && (
+            <Alert variant="destructive" className="rounded-2xl">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription className="text-[11px]">{authError}</AlertDescription>
             </Alert>
           )}
 
@@ -204,13 +229,6 @@ export default function LoginPage() {
             </svg>
             AUTENTICACIÓN GOOGLE
           </Button>
-          
-          <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
-            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-[10px] text-blue-600 leading-relaxed">
-              <strong>Tip:</strong> Si ves un error de "Dominio no autorizado", copia el nombre del servidor arriba y añádelo en la configuración de Authentication en tu consola de Firebase.
-            </p>
-          </div>
         </CardContent>
         <CardFooter className="pb-10 flex justify-center">
           <button 
