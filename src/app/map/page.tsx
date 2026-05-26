@@ -13,18 +13,15 @@ import {
   ChevronRight,
   Save,
   Navigation,
-  ZoomIn,
   MapPin,
   Trash2,
-  Filter,
-  Maximize2,
-  Navigation2,
   Layers,
   Crosshair,
   Map as MapIcon,
   MousePointer2,
   List,
-  MapPinned
+  MapPinned,
+  LocateFixed
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,14 +46,14 @@ const COLORS = [
 ];
 
 const COLOMBIA_DATABASE = [
-  { id: 'c1', name: 'Bello, Antioquia', lat: 6.3373, lng: -75.5579, type: 'Ciudad', color: '#3b82f6' },
-  { id: 'c2', name: 'Medellín, Antioquia', lat: 6.2442, lng: -75.5812, type: 'Ciudad', color: '#10b981' },
-  { id: 'c3', name: 'Bogotá, D.C.', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
-  { id: 'c4', name: 'Cali, Valle del Cauca', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
-  { id: 'c5', name: 'Barranquilla, Atlántico', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
-  { id: 'c6', name: 'Cartagena, Bolívar', lat: 10.4236, lng: -75.5251, type: 'Ciudad', color: '#0ea5e9' },
-  { id: 'c7', name: 'Bucaramanga, Santander', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
-  { id: 'c8', name: 'Pereira, Risaralda', lat: 4.8133, lng: -75.6961, type: 'Ciudad', color: '#f59e0b' },
+  { id: 'c1', name: 'Bello', lat: 6.3373, lng: -75.5579, type: 'Ciudad', color: '#3b82f6' },
+  { id: 'c2', name: 'Medellín', lat: 6.2442, lng: -75.5812, type: 'Ciudad', color: '#10b981' },
+  { id: 'c3', name: 'Bogotá', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
+  { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
+  { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
+  { id: 'c6', name: 'Cartagena', lat: 10.4236, lng: -75.5251, type: 'Ciudad', color: '#0ea5e9' },
+  { id: 'c7', name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
+  { id: 'c8', name: 'Pereira', lat: 4.8133, lng: -75.6961, type: 'Ciudad', color: '#f59e0b' },
 ];
 
 export default function SpatialHub() {
@@ -89,12 +86,25 @@ export default function SpatialHub() {
     
     if (lat && lng) {
       setViewCenter({ lat, lng });
-      setMapZoom(16); // Zoom profundo de análisis estratégico
+      setMapZoom(16);
       setShowSearchResults(false);
       setSearchQuery(point.name);
       toast({ 
         title: `Geo-Lock: ${point.name}`, 
-        description: `Analizando coordenadas ${lat.toFixed(4)}, ${lng.toFixed(4)}` 
+        description: `Posicionando cámara en coordenadas de análisis.` 
+      });
+    }
+  };
+
+  const handleEditorSearch = () => {
+    const match = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(newZoneName.toLowerCase()));
+    if (match) {
+      handleFocusPoint(match);
+    } else {
+      toast({ 
+        variant: "destructive",
+        title: "Ubicación no encontrada", 
+        description: "Intente con ciudades principales de Colombia." 
       });
     }
   };
@@ -113,8 +123,9 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Estratégica Guardada", description: "El perímetro ha sido registrado exitosamente." });
+        toast({ title: "Zona Estratégica Guardada", description: "Perímetro registrado y enfocado." });
         setNewZoneName('');
+        setMapZoom(17); // Zoom automático tras guardar zona
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -129,12 +140,12 @@ export default function SpatialHub() {
   const addPlanningPoint = () => {
     const newPoint = {
       id: Date.now(),
-      name: `Punto Estratégico ${plannedPoints.length + 1}`,
+      name: `Nodo ${plannedPoints.length + 1}`,
       lat: viewCenter.lat,
       lng: viewCenter.lng
     };
     setPlannedPoints([...plannedPoints, newPoint]);
-    toast({ title: "Nodo Añadido", description: "Posición fijada en la cartografía operativa." });
+    toast({ title: "Punto de Ruta Fijado", description: "El nodo ha sido añadido a la planeación actual." });
   };
 
   return (
@@ -142,7 +153,6 @@ export default function SpatialHub() {
       <AppSidebar />
       
       <aside className="w-[420px] min-w-[420px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20 shadow-2xl relative">
-        {/* Branding & Navigation */}
         <div className="p-6 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl shadow-xl shadow-primary/30 rotate-3">
@@ -192,13 +202,22 @@ export default function SpatialHub() {
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <label className="text-[9px] font-bold text-muted-foreground uppercase ml-1">Nombre de la Zona</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Perímetro Bello Norte"
-                        className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 px-5 text-xs focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/30 text-white"
-                        value={newZoneName}
-                        onChange={(e) => setNewZoneName(e.target.value)}
-                      />
+                      <div className="relative group">
+                        <input 
+                          type="text" 
+                          placeholder="Escriba lugar (ej: Bello)..."
+                          className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-5 pr-12 text-xs focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/30 text-white"
+                          value={newZoneName}
+                          onChange={(e) => setNewZoneName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleEditorSearch()}
+                        />
+                        <button 
+                          onClick={handleEditorSearch}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-white/10 rounded-xl text-primary transition-all"
+                        >
+                          <LocateFixed className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -219,9 +238,9 @@ export default function SpatialHub() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
-                      <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
-                      <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
+                      <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setMapZoom(16); }} icon={Hexagon} label="POLÍGONO" />
+                      <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); setMapZoom(16); }} icon={Square} label="ÁREA" />
+                      <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); setMapZoom(16); }} icon={Circle} label="RADIO" />
                     </div>
 
                     <button 
@@ -255,7 +274,7 @@ export default function SpatialHub() {
                             <div className="w-2 h-12 rounded-full shadow-lg" style={{ backgroundColor: zone.color }} />
                             <div>
                               <p className="text-xs font-bold text-white/90">{zone.name}</p>
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type} • Activo</p>
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type} • Geo-Enfocado</p>
                             </div>
                           </div>
                           <button 
@@ -285,23 +304,23 @@ export default function SpatialHub() {
               >
                 <div className="glass-panel p-6 rounded-[32px] border-accent/20 bg-accent/5">
                   <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-4">Planeación de Nodos</h3>
-                  <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">Geolocaliza el mapa en la posición deseada y añade puntos estratégicos.</p>
+                  <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">Ubique el puntero del mapa sobre la zona analizada y añada nodos estratégicos.</p>
                   
                   <button 
                     onClick={addPlanningPoint}
                     className="w-full bg-accent text-white py-4 rounded-2xl text-[10px] font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-xl shadow-accent/20"
                   >
                     <MapPin className="w-4 h-4" />
-                    AÑADIR NODO ESTRATÉGICO
+                    AÑADIR NODO DE RUTA
                   </button>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">NODOS DEFINIDOS ({plannedPoints.length})</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">RUTAS EN TRAZADO ({plannedPoints.length})</h3>
                   {plannedPoints.length === 0 ? (
                     <div className="py-20 border-2 border-dashed border-white/5 rounded-[32px] flex flex-col items-center text-center px-8">
                        <Navigation className="w-10 h-10 text-white/5 mb-4" />
-                       <p className="text-[11px] text-muted-foreground">No hay nodos. Comienza a marcar puntos en el mapa para análisis.</p>
+                       <p className="text-[11px] text-muted-foreground">Utilice la herramienta para marcar nodos dentro de su zona operativa.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -336,7 +355,7 @@ export default function SpatialHub() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Buscador inteligente..." 
+                    placeholder="Buscar ciudad o zona..." 
                     className="w-full bg-black/40 border border-white/10 rounded-[20px] py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all text-white"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -344,16 +363,14 @@ export default function SpatialHub() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">RESULTADOS DE ANÁLISIS</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">RESULTADOS GEOGRÁFICOS</h3>
                   {searchResults.mapPoints.length === 0 && searchResults.saved.length === 0 && searchQuery ? (
-                    <p className="text-xs text-muted-foreground text-center py-10 italic">No se encontraron coincidencias.</p>
+                    <p className="text-xs text-muted-foreground text-center py-10 italic">No hay resultados para esta ubicación.</p>
                   ) : (
                     <div className="space-y-3">
-                      {/* Localizaciones Globales */}
                       {searchResults.mapPoints.map((point) => (
                         <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
                       ))}
-                      {/* Zonas Propias */}
                       {searchResults.saved.map((point) => (
                         <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
                       ))}
@@ -370,14 +387,13 @@ export default function SpatialHub() {
              <span className="text-muted-foreground">ANALYSIS ENGINE v4.2</span>
              <span className="text-emerald-500 flex items-center gap-2">
                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-               SYSTEM ONLINE
+               GEO-LOCK ON
              </span>
            </div>
         </div>
       </aside>
       
       <main className="flex-1 relative bg-[#05070A] overflow-hidden">
-        {/* Mapa con props dinámicas */}
         <VectorMap 
           lat={viewCenter.lat} 
           lng={viewCenter.lng} 
@@ -386,7 +402,6 @@ export default function SpatialHub() {
           zones={zones}
         />
         
-        {/* BUSCADOR FLOTANTE INTELIGENTE (TOP MAPA) */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
            <div className="relative group">
               <div className="bg-[#0E1117]/90 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
@@ -395,7 +410,7 @@ export default function SpatialHub() {
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Explorar territorio o zonas..."
+                  placeholder="Geolocalizar en el mapa..."
                   className="bg-transparent border-none outline-none text-sm flex-1 text-white placeholder:text-muted-foreground/40 font-medium"
                   value={searchQuery}
                   onFocus={() => setShowSearchResults(true)}
@@ -405,17 +420,12 @@ export default function SpatialHub() {
                   }}
                 />
                 <div className="flex items-center gap-2 pr-2">
-                  <button className="w-10 h-10 hover:bg-white/5 rounded-2xl text-muted-foreground flex items-center justify-center transition-all">
-                    <Layers className="w-4 h-4" />
-                  </button>
-                  <div className="w-[1px] h-6 bg-white/10" />
                   <button className="w-10 h-10 hover:bg-white/5 rounded-2xl text-muted-foreground flex items-center justify-center transition-all" onClick={() => setViewCenter({ lat: 4.6097, lng: -74.0817 })}>
                     <Crosshair className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* Panel de Resultados Flotante */}
               <AnimatePresence>
                 {showSearchResults && searchQuery && (
                   <motion.div 
@@ -431,9 +441,6 @@ export default function SpatialHub() {
                       {searchResults.saved.map(point => (
                         <SearchItemMini key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
                       ))}
-                      {searchResults.mapPoints.length === 0 && searchResults.saved.length === 0 && (
-                        <div className="p-8 text-center text-xs text-muted-foreground italic">No se encontraron resultados para "{searchQuery}"</div>
-                      )}
                     </div>
                   </motion.div>
                 )}
@@ -441,7 +448,6 @@ export default function SpatialHub() {
            </div>
         </div>
         
-        {/* Controles de Zoom y Telemetría */}
         <div className="absolute bottom-8 right-8 flex flex-col gap-4 z-30">
           <div className="bg-[#0E1117]/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-1 flex flex-col shadow-2xl">
             <button 
@@ -454,33 +460,23 @@ export default function SpatialHub() {
               className="w-14 h-14 hover:bg-white/5 rounded-b-[24px] text-lg font-bold transition-all text-white/60 hover:text-white"
             >−</button>
           </div>
-          <button className="w-14 h-14 bg-primary text-white rounded-[26px] shadow-2xl shadow-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
-            <Maximize2 className="w-6 h-6" />
-          </button>
         </div>
 
-        {/* Panel de Telemetría Inferior */}
         <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
           <div className="bg-[#0E1117]/90 backdrop-blur-3xl border border-white/10 rounded-[32px] px-10 py-6 shadow-2xl border-l-8 border-l-primary flex gap-12 items-center">
             <div>
-              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">VECTOR POS</p>
-              <p className="text-xs font-mono font-bold text-white">{viewCenter.lat.toFixed(6)} N, {viewCenter.lng.toFixed(6)} W</p>
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">COORDENADAS</p>
+              <p className="text-xs font-mono font-bold text-white">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
             </div>
             <div className="w-[1px] h-10 bg-white/10" />
             <div>
-              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">RESOLUCIÓN</p>
-              <p className="text-xs font-mono font-bold text-white">{(mapZoom * 1.5).toFixed(1)} km²</p>
-            </div>
-            <div className="w-[1px] h-10 bg-white/10" />
-            <div className="flex items-center gap-4">
-              <div className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]" />
-              <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">GEO-LOCK READY</p>
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">RADIO DE ANÁLISIS</p>
+              <p className="text-xs font-mono font-bold text-white">{(20 - mapZoom) * 0.5} km</p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Overlay de clic para cerrar resultados */}
       {showSearchResults && <div className="fixed inset-0 z-20" onClick={() => setShowSearchResults(false)} />}
     </div>
   );
@@ -514,11 +510,11 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
     >
       <div className="flex items-center gap-4">
         <div className={cn("w-12 h-12 rounded-2xl bg-black/60 flex items-center justify-center border", isSaved ? "border-primary/20" : "border-accent/20")}>
-          {isSaved ? <MapIcon className="w-5 h-5 text-primary" /> : <Crosshair className="w-5 h-5 text-accent" />}
+          {isSaved ? <MapIcon className="w-5 h-5 text-primary" /> : <MapPin className="w-5 h-5 text-accent" />}
         </div>
         <div>
           <p className="text-sm font-bold text-white/90">{point.name}</p>
-          <p className="text-[10px] text-muted-foreground uppercase">{isSaved ? 'Zona Guardada' : point.type}</p>
+          <p className="text-[10px] text-muted-foreground uppercase">{isSaved ? 'Zona Estratégica' : point.type}</p>
         </div>
       </div>
       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" />
