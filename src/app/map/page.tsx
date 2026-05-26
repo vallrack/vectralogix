@@ -119,11 +119,7 @@ export default function SpatialHub() {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
       
-      if (point.type === 'Ciudad' || point.type === 'Capital') {
-        setNewZoneName(point.name);
-      } else if (activeTab === 'zonas') {
-        setNewZoneName(point.name || '');
-      }
+      setNewZoneName(point.name || '');
 
       toast({
         title: "Ubicación Localizada",
@@ -351,6 +347,7 @@ export default function SpatialHub() {
                         className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 pr-12 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleQuickSearch()}
                       />
                       <button 
                         onClick={handleQuickSearch}
