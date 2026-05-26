@@ -75,7 +75,7 @@ export function VectorMap({
   })), [savedRoutes, lat, lng, zoom, dimensions]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-slate-200 select-none pointer-events-none transition-opacity duration-300">
+    <div className="relative w-full h-full overflow-hidden bg-slate-200 select-none transition-opacity duration-300">
       <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] brightness-[0.98]">
         <iframe
           key={`${lat}-${lng}-${displayZoom}`}
@@ -101,15 +101,15 @@ export function VectorMap({
             const points = zone.points;
             if (!points || points.length === 0) return null;
             return (
-              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.25 }}>
+              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.35 }}>
                 {zone.type === 'polygon' && points.length > 2 ? (
-                  <path d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
+                  <path d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
                 ) : zone.type === 'rect' ? (
-                  <rect x={points[0].x - 60} y={points[0].y - 45} width={120} height={90} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
+                  <rect x={points[0].x - 60} y={points[0].y - 45} width={120} height={90} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
                 ) : (
-                  <circle cx={points[0].x} cy={points[0].y} r={80} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
+                  <circle cx={points[0].x} cy={points[0].y} r={80} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" className="opacity-30" />
                 )}
-                <text x={points[0].x} y={points[0].y - 30} textAnchor="middle" fill={zone.color} fontSize="10" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
+                <text x={points[0].x} y={points[0].y - 30} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_2px_2px_rgba(255,255,255,1)]">
                   {zone.name}
                 </text>
               </motion.g>
@@ -132,10 +132,10 @@ export function VectorMap({
 
           {/* Rutas Guardadas */}
           {projectedSavedRoutes.map((route) => (
-            <g key={route.id} className="opacity-40">
-              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#475569" strokeWidth="4" strokeDasharray="10,5" />
+            <g key={route.id} className="opacity-60">
+              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="4" strokeDasharray="10,5" />
               {route.points.map((p: any, i: number) => (
-                <circle key={i} cx={p.x} cy={p.y} r="4" fill="#475569" stroke="white" strokeWidth="2" />
+                <circle key={i} cx={p.x} cy={p.y} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
               ))}
             </g>
           ))}
@@ -157,7 +157,7 @@ export function VectorMap({
         </svg>
 
         {/* Mira Telescópica Central */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-20">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-10">
           <div className="w-40 h-40 border border-primary/20 rounded-full flex items-center justify-center">
             <div className="w-1 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(37,99,235,1)]" />
           </div>

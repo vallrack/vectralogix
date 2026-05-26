@@ -144,15 +144,15 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        // Enfocar automáticamente la zona recién creada
+        // Enfoque automático con Zoom al guardar
         if (zonePoints.length > 0) {
           setViewCenter({ lat: zonePoints[0].lat, lng: zonePoints[0].lng });
-          setMapZoom(16);
+          setMapZoom(17); // Zoom más cercano para inspeccionar
         }
 
         toast({ 
           title: "Zona Registrada", 
-          description: `"${newZoneName}" guardada. Mapa enfocado para inspección.`,
+          description: `"${newZoneName}" guardada. Mapa enfocado para inspección detallada.`,
           action: (
             <ToastAction altText="Planear Ruta" onClick={() => { 
               setActiveTab('rutas'); 
@@ -167,7 +167,7 @@ export default function SpatialHub() {
         
         setNewZoneName('');
         setZonePoints([]);
-        setIsDrawing(false);
+        setIsDrawing(false); // Devolver la manito de navegación
       })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -203,7 +203,7 @@ export default function SpatialHub() {
         toast({ title: "Ruta Guardada", description: "Trayectoria logística registrada exitosamente." });
         setNewRouteName('');
         setPlannedPoints([]);
-        setIsDrawing(false);
+        setIsDrawing(false); // Devolver la manito de navegación
       })
       .catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -467,7 +467,7 @@ export default function SpatialHub() {
       </aside>
       
       <main ref={mapContainerRef} className="flex-1 relative bg-slate-200 overflow-hidden">
-        {/* Capa de Captura Táctica */}
+        {/* Capa de Captura Táctica (Solo activa en modo dibujo) */}
         {isDrawing && (
           <div 
             className="absolute inset-0 z-40 cursor-crosshair bg-transparent" 
