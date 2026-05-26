@@ -13,9 +13,20 @@ interface VectorMapProps {
   zones?: any[];
   savedRoutes?: any[];
   containerRef?: React.RefObject<HTMLDivElement>;
+  activeColor?: string;
 }
 
-export function VectorMap({ lat, lng, zoom, plannedPoints = [], zonePoints = [], zones = [], savedRoutes = [], containerRef }: VectorMapProps) {
+export function VectorMap({ 
+  lat, 
+  lng, 
+  zoom, 
+  plannedPoints = [], 
+  zonePoints = [], 
+  zones = [], 
+  savedRoutes = [], 
+  containerRef,
+  activeColor = "#3b82f6"
+}: VectorMapProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   const displayZoom = Math.round(zoom);
@@ -102,7 +113,7 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zonePoints = [],
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
-          {/* Zonas Proyectadas (Áreas) */}
+          {/* Zonas Proyectadas (Áreas Guardadas) */}
           {projectedZones.map((zone) => {
             const baseSize = Math.pow(2, zoom - 14) * 40;
             const points = zone.points;
@@ -110,7 +121,7 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zonePoints = [],
             if (!points || points.length === 0) return null;
 
             return (
-              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.3 }}>
+              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.35 }}>
                 {zone.type === 'polygon' && points.length > 2 ? (
                   <path 
                     d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} 
@@ -124,27 +135,27 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zonePoints = [],
                 ) : (
                   <circle cx={points[0].x} cy={points[0].y} r={baseSize * 4} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
                 )}
-                <text x={points[0].x} y={points[0].y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="900" className="uppercase tracking-widest drop-shadow-lg">{zone.name}</text>
+                <text x={points[0].x} y={points[0].y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="900" className="uppercase tracking-widest drop-shadow-md">{zone.name}</text>
               </motion.g>
             );
           })}
 
-          {/* Zona en Trazado Actual */}
+          {/* Zona en Trazado Actual (Preview con Color Activo) */}
           {currentZonePath.length > 0 && (
             <g>
               {currentZonePath.length > 2 ? (
                 <motion.path 
                   initial={{ opacity: 0 }} 
-                  animate={{ opacity: 0.4 }}
+                  animate={{ opacity: 0.45 }}
                   d={`M ${currentZonePath.map(p => `${p.x},${p.y}`).join(' L ')} Z`} 
-                  fill="#2563eb"
-                  stroke="#2563eb"
+                  fill={activeColor}
+                  stroke={activeColor}
                   strokeWidth="2"
                   strokeDasharray="4,4"
                 />
               ) : null}
               {currentZonePath.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r="5" fill="#2563eb" stroke="white" strokeWidth="2" />
+                <circle key={i} cx={p.x} cy={p.y} r="6" fill={activeColor} stroke="white" strokeWidth="2" />
               ))}
             </g>
           )}

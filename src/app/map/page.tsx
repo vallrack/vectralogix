@@ -78,6 +78,8 @@ export default function SpatialHub() {
   const { data: zones, loading: zonesLoading } = useCollection(zonesQuery);
   const { data: savedRoutes, loading: routesLoading } = useCollection(routesQuery);
 
+  const activeHexColor = useMemo(() => COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6', [selectedColor]);
+
   const searchResults = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return null;
@@ -117,9 +119,11 @@ export default function SpatialHub() {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
       
-      // Auto-fill name if searching for a city to delimit
-      if (activeTab === 'zonas' && !newZoneName) {
+      // Auto-fill name if searching to delimit
+      if (activeTab === 'zonas') {
         setNewZoneName(point.name || '');
+      } else if (activeTab === 'rutas') {
+        setNewRouteName(point.name || '');
       }
 
       toast({
@@ -172,7 +176,6 @@ export default function SpatialHub() {
       return;
     }
     setIsSaving(true);
-    const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
     
     // If no points drawn, use map center
     const finalCoordinates = zonePoints.length > 0 
@@ -182,7 +185,7 @@ export default function SpatialHub() {
     const zoneData = {
       name: newZoneName,
       type: activeTool,
-      color: colorHex,
+      color: activeHexColor,
       coordinates: finalCoordinates,
       zoom: mapZoom,
       createdAt: serverTimestamp()
@@ -294,14 +297,14 @@ export default function SpatialHub() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white relative">
-          {/* Resultados de Búsqueda */}
-          <AnimatePresence>
-            {searchQuery && (
+          <AnimatePresence mode="wait">
+            {searchQuery ? (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-4 overflow-hidden"
+                key="search-results"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
               >
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 px-2">
                   <Target className="w-3 h-3" />
@@ -323,7 +326,7 @@ export default function SpatialHub() {
                 </div>
                 <div className="h-px bg-slate-100 mx-2" />
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
 
           <div className="space-y-8">
@@ -380,7 +383,8 @@ export default function SpatialHub() {
                     <button 
                       onClick={handleSaveZone}
                       disabled={isSaving || !newZoneName}
-                      className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                      className="w-full text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                      style={{ backgroundColor: activeHexColor }}
                     >
                       <Save className="w-4 h-4" />
                       {isSaving ? 'GUARDANDO...' : 'REGISTRAR ZONA'}
@@ -519,7 +523,7 @@ export default function SpatialHub() {
           "cursor-crosshair ring-inset ring-4 ring-primary/5"
         )}
       >
-        {/* Layer to capture clicks above the iframe */}
+        {/* Capa de captura de clics */}
         <div 
           className="absolute inset-0 z-40 cursor-crosshair"
           onClick={handleMapClick}
@@ -534,6 +538,7 @@ export default function SpatialHub() {
           zones={zones}
           savedRoutes={savedRoutes}
           containerRef={mapContainerRef}
+          activeColor={activeHexColor}
         />
         
         <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-50">
@@ -561,10 +566,11 @@ export default function SpatialHub() {
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-primary text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
+            className="text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
+            style={{ backgroundColor: activeHexColor }}
           >
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            MODO DIBUJO ACTIVO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
+            MODO DIBUJO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
           </motion.div>
         </div>
       </main>
