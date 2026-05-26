@@ -67,19 +67,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Zonas tácticas. ACCESO TOTAL para usuarios autenticados."
+      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Planeación logística. ACCESO TOTAL para usuarios autenticados."
+      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
     },
     "/drivers/{driverId}": {
       "schema": "#/backend/entities/Driver",
-      "description": "Gestión de flota. ACCESO TOTAL para usuarios autenticados."
+      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
     },
     "/orders/{orderId}": {
       "schema": "#/backend/entities/Order",
-      "description": "Pedidos activos. ACCESO TOTAL para usuarios autenticados."
+      "description": "ACCESO TOTAL: Lectura y escritura permitida para todos los usuarios autenticados."
     }
   }
 }

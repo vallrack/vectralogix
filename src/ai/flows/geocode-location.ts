@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview Motor de geocodificación resiliente con el 'Ejército de IA'.
- * Implementa una cascada de modelos (Flash -> Pro) para asegurar la localización.
+ * Implementa una cascada de modelos (Flash 2.5 -> Flash 1.5 -> Pro) para asegurar la localización.
  */
 
 import {ai} from '@/ai/genkit';

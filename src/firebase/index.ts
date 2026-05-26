@@ -3,7 +3,8 @@
 
 /**
  * @fileOverview Inicialización de Firebase con reglas de seguridad dinámicas.
- * TRIGGER: Despliegue de permisos totales para zones, routes, drivers y orders.
+ * TRIGGER: Despliegue de permisos globales para zones, routes, drivers y orders.
+ * Operación 'Libre Acceso Total' activada para el centro de mando VectraLogix.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -26,7 +27,7 @@ export function initializeFirebase() {
   return { app, db, auth };
 }
 
-// Comentario para forzar despliegue de reglas: Operación 'Libertad Total' Activa.
+// Comentario para forzar despliegue de reglas en el servidor: Operación 'Libertad Total' Activa.
 
 export * from './provider';
 export * from './client-provider';
