@@ -3,7 +3,7 @@
   "entities": {
     "Zone": {
       "title": "Zona Geográfica",
-      "description": "Representa una zona delimitada en el mapa por el usuario.",
+      "description": "Representa una zona delimitada en el mapa por el usuario con su nivel de detalle.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -11,6 +11,7 @@
         "type": { "type": "string", "enum": ["polygon", "rect", "circle"] },
         "color": { "type": "string" },
         "coordinates": { "type": "array", "description": "Lista de puntos lat/lng que definen la zona." },
+        "zoom": { "type": "number", "description": "Nivel de zoom guardado para esta zona." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "type", "color", "coordinates"]

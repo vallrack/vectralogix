@@ -21,7 +21,9 @@ import {
   MousePointer2,
   List,
   MapPinned,
-  Zap
+  Zap,
+  Target,
+  Maximize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,7 +65,7 @@ export default function SpatialHub() {
   const [newZoneName, setNewZoneName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [mapZoom, setMapZoom] = useState(12);
+  const [mapZoom, setMapZoom] = useState(14);
   const [viewCenter, setViewCenter] = useState({ lat: 4.6097, lng: -74.0817 });
   const [plannedPoints, setPlannedPoints] = useState<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -83,15 +85,16 @@ export default function SpatialHub() {
   const handleFocusPoint = (point: any) => {
     const lat = point.lat || (point.coordinates && point.coordinates[0]?.lat);
     const lng = point.lng || (point.coordinates && point.coordinates[0]?.lng);
+    const targetZoom = point.zoom || 18.5; // Zoom profundo para ver edificios
     
     if (lat !== undefined && lng !== undefined) {
       setViewCenter({ lat, lng });
-      setMapZoom(18); // Zoom profundo para exploración táctica
+      setMapZoom(targetZoom);
       setShowSearchResults(false);
       setSearchQuery(point.name || '');
       toast({
-        title: "Geo-Lock Activado",
-        description: `Posicionando mapa en: ${point.name || 'Coordenadas seleccionadas'}`,
+        title: "Enfoque Táctico",
+        description: `Visualizando detalle urbano en: ${point.name || 'Coordenadas seleccionadas'}`,
       });
     }
   };
@@ -120,7 +123,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Cálculo de proyección de precisión
+    // Proyección de mercator simplificada para clics
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -142,7 +145,7 @@ export default function SpatialHub() {
     setPlannedPoints([...plannedPoints, newPoint]);
     toast({ 
       title: "Nodo Fijado", 
-      description: "Punto de ruta establecido con precisión en la cartografía." 
+      description: "Punto de ruta establecido en la cartografía táctica." 
     });
   };
 
@@ -150,11 +153,14 @@ export default function SpatialHub() {
     if (!firestore || !newZoneName) return;
     setIsSaving(true);
     const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
+    
+    // Guardamos la zona con el zoom actual para permitir el "pantallazo" posterior
     const zoneData = {
       name: newZoneName,
       type: activeTool,
       color: colorHex,
       coordinates: [{ lat: viewCenter.lat, lng: viewCenter.lng }],
+      zoom: mapZoom > 17 ? mapZoom : 18.5, // Aseguramos zoom profundo
       createdAt: serverTimestamp()
     };
 
@@ -162,9 +168,9 @@ export default function SpatialHub() {
       .then(() => {
         toast({ 
           title: "Zona Registrada", 
-          description: "Perímetro guardado. Iniciando exploración de alta resolución." 
+          description: "Perímetro guardado con snapshot de alta resolución." 
         });
-        setMapZoom(18); // Auto-zoom tras guardar
+        setMapZoom(19); // Zoom máximo al guardar para inspección inmediata
         setNewZoneName('');
       })
       .catch(async () => {
@@ -182,15 +188,15 @@ export default function SpatialHub() {
     if (delta > 0) {
       setMapZoom(prev => Math.max(prev - 0.5, 5));
     } else {
-      setMapZoom(prev => Math.min(prev + 0.5, 20));
+      setMapZoom(prev => Math.min(prev + 0.5, 21));
     }
   };
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden font-body">
+    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-body">
       <AppSidebar />
       
-      <aside className="w-[400px] min-w-[400px] bg-card border-r border-slate-200/60 flex flex-col z-20 shadow-xl relative">
+      <aside className="w-[400px] min-w-[400px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">
@@ -202,7 +208,7 @@ export default function SpatialHub() {
             </div>
           </div>
 
-          <div className="flex bg-slate-100/80 p-1 rounded-xl">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
             {ZONES_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -211,7 +217,7 @@ export default function SpatialHub() {
                   "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
                   activeTab === tab.id 
                     ? "bg-white text-primary shadow-sm" 
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
+                    : "text-slate-500 hover:text-slate-900"
                 )}
               >
                 <tab.icon className="w-3.5 h-3.5" />
@@ -253,7 +259,7 @@ export default function SpatialHub() {
                           <Search className="w-4 h-4" />
                         </div>
                       </div>
-                      <p className="text-[9px] text-slate-400 mt-1 italic px-1">Presiona Enter para geolocalizar automáticamente.</p>
+                      <p className="text-[9px] text-slate-400 mt-1 italic px-1">Presiona Enter para geolocalizar y enfocar edificios.</p>
                     </div>
                     
                     <div className="space-y-2">
@@ -310,18 +316,26 @@ export default function SpatialHub() {
                             <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
                             <div>
                               <p className="text-xs font-bold text-slate-800">{zone.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{zone.type}</p>
+                              <p className="text-[9px] text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                <Target className="w-2.5 h-2.5" />
+                                Zoom {Math.round(zone.zoom || 18)}x
+                              </p>
                             </div>
                           </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
-                            }} 
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex gap-1">
+                            <button className="p-2 opacity-0 group-hover:opacity-100 hover:bg-primary/10 rounded-lg text-primary transition-all">
+                              <Maximize2 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
+                              }} 
+                              className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -344,7 +358,7 @@ export default function SpatialHub() {
                     Modo Interactivo
                   </h3>
                   <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">
-                    Haz clic directamente en el mapa para posicionar los nodos de tu ruta estratégica.
+                    Usa el puntero del mouse para colocar nodos de ruta directamente sobre el terreno enfocado.
                   </p>
                   <div className="p-3 bg-white border border-primary/10 rounded-xl flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -359,7 +373,7 @@ export default function SpatialHub() {
                   {plannedPoints.length === 0 ? (
                     <div className="py-20 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center text-center px-8">
                        <Navigation className="w-10 h-10 text-slate-200 mb-4" />
-                       <p className="text-[11px] text-slate-400">Interactúa con el mapa para iniciar el trazado.</p>
+                       <p className="text-[11px] text-slate-400">Interactúa con el mapa para iniciar el trazado estratégico.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -370,7 +384,7 @@ export default function SpatialHub() {
                           </div>
                           <div className="flex-1">
                             <p className="text-xs font-bold text-slate-800">{point.name}</p>
-                            <p className="text-[9px] text-slate-400 font-mono">{point.lat.toFixed(4)}, {point.lng.toFixed(4)}</p>
+                            <p className="text-[9px] text-slate-400 font-mono">{point.lat.toFixed(6)}, {point.lng.toFixed(6)}</p>
                           </div>
                           <button onClick={(e) => { e.stopPropagation(); setPlannedPoints(plannedPoints.filter(p => p.id !== point.id)); }} className="text-slate-300 hover:text-red-500 transition-colors">
                             <Trash2 className="w-4 h-4" />
@@ -492,19 +506,19 @@ export default function SpatialHub() {
         <div className="absolute bottom-8 right-8 flex flex-col gap-3 z-30">
           <div className="bg-white border border-slate-200 rounded-2xl p-1 flex flex-col shadow-xl">
             <button 
-              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 1, 20)); }}
-              className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-t-xl"
+              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 1, 21)); }}
+              className="w-12 h-12 hover:bg-slate-50 text-xl font-bold transition-all text-slate-600 rounded-t-xl"
             >+</button>
             <div className="h-[1px] bg-slate-100 mx-2" />
             <button 
               onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.max(prev - 1, 5)); }}
-              className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-b-xl"
+              className="w-12 h-12 hover:bg-slate-50 text-xl font-bold transition-all text-slate-600 rounded-b-xl"
             >−</button>
           </div>
         </div>
 
         <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
-          <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-xl border-l-4 border-l-primary flex gap-8 items-center">
+          <div className="bg-white/90 backdrop-blur border border-slate-200 rounded-2xl px-6 py-4 shadow-xl border-l-4 border-l-primary flex gap-8 items-center">
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">POSICIÓN TÁCTICA</p>
               <p className="text-xs font-mono font-bold text-slate-800">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
