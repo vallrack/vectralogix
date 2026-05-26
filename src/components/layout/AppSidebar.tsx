@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -9,7 +8,6 @@ import {
   Map as MapIcon, 
   Route, 
   Users, 
-  ShieldCheck, 
   BarChart3, 
   Package,
   Command,
@@ -42,7 +40,7 @@ export function AppSidebar() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      toast({ title: "Sesión cerrada", description: "Vuelve pronto." });
+      toast({ title: "Sesión cerrada", description: "Vuelve pronto a VectraLogix." });
       router.push('/login');
     } catch (error) {
       console.error(error);
@@ -51,18 +49,18 @@ export function AppSidebar() {
 
   return (
     <div className={cn(
-      "h-screen border-r border-slate-200/60 flex flex-col bg-card/80 backdrop-blur-sm z-50 transition-all duration-300 relative shadow-sm",
+      "h-screen border-r border-slate-200 flex flex-col bg-card/95 backdrop-blur-md z-50 transition-all duration-300 relative shadow-sm",
       isCollapsed ? "w-20" : "w-64"
     )}>
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 w-6 h-6 bg-card border border-slate-200/60 rounded-full flex items-center justify-center text-slate-400 shadow-md z-[60] hover:text-primary transition-colors"
+        className="absolute -right-3 top-24 w-6 h-6 bg-card border border-slate-200 rounded-full flex items-center justify-center text-slate-400 shadow-md z-[60] hover:text-primary transition-colors"
       >
         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
 
       <div className={cn("p-6 flex items-center gap-3", isCollapsed ? "justify-center px-2" : "")}>
-        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-primary flex items-center justify-center text-white neon-glow">
+        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
           <Command className="w-6 h-6" />
         </div>
         {!isCollapsed && (
@@ -84,7 +82,7 @@ export function AppSidebar() {
                 "group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200",
                 isActive 
                   ? "bg-primary/10 text-primary" 
-                  : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900",
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900",
                 isCollapsed ? "justify-center px-0" : ""
               )}
               title={isCollapsed ? item.label : ""}
@@ -101,35 +99,35 @@ export function AppSidebar() {
 
       <div className="p-4 mt-auto space-y-2">
         {!isCollapsed && (
-          <div className="bg-slate-200/40 p-4 rounded-2xl mb-4 border border-slate-200/60">
+          <div className="bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-200">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Estado Sistema</span>
-              <span className="text-[10px] font-bold text-emerald-500 uppercase">Óptimo</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Sistema</span>
+              <span className="text-[10px] font-bold text-emerald-500 uppercase">Activo</span>
             </div>
             <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-              <div className="w-[85%] h-full bg-primary rounded-full" />
+              <div className="w-[92%] h-full bg-primary rounded-full" />
             </div>
           </div>
         )}
 
         <div className={cn(
-          "flex items-center gap-3 px-4 py-3 hover:bg-slate-200/50 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-200/60",
+          "flex items-center gap-3 px-4 py-3 hover:bg-slate-100 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-200",
           isCollapsed ? "justify-center" : ""
         )}>
-          <div className="w-8 h-8 rounded-full bg-slate-200/60 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
             <Settings className="w-4 h-4 text-slate-500" />
           </div>
-          {!isCollapsed && <span className="text-sm font-semibold text-slate-600">Configuración</span>}
+          {!isCollapsed && <span className="text-sm font-semibold text-slate-600">Ajustes</span>}
         </div>
 
         <button 
           onClick={handleSignOut}
           className={cn(
-            "w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-500 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-red-100",
+            "w-full flex items-center gap-3 px-4 py-3 hover:bg-rose-50 text-rose-600 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-rose-100",
             isCollapsed ? "justify-center" : ""
           )}
         >
-          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-rose-50 flex items-center justify-center">
             <LogOut className="w-4 h-4" />
           </div>
           {!isCollapsed && <span className="text-sm font-semibold">Cerrar Sesión</span>}
