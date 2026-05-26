@@ -9,7 +9,6 @@ import {
   Circle, 
   Hexagon,
   Search,
-  RefreshCw,
   ChevronRight,
   Save,
   Navigation,
@@ -17,7 +16,6 @@ import {
   Trash2,
   Layers,
   Crosshair,
-  MousePointer2,
   List,
   MapPinned,
   Route as RouteIcon,
@@ -25,7 +23,7 @@ import {
   Target,
   Pencil,
   Locate,
-  Send
+  Eraser
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -393,9 +391,15 @@ export default function SpatialHub() {
                     <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
                   </div>
 
-                  <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-center space-y-1">
-                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Puntos en Mapa: {zonePoints.length}</p>
-                    <p className="text-[8px] text-slate-400 leading-tight">Haz clic sobre el territorio para dibujar.</p>
+                  <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/10 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Puntos: {zonePoints.length}</span>
+                    <button 
+                      onClick={() => setZonePoints([])} 
+                      className="text-[9px] font-bold text-rose-500 uppercase hover:text-rose-600 flex items-center gap-1 transition-colors"
+                    >
+                      <Eraser className="w-3 h-3" />
+                      Limpiar
+                    </button>
                   </div>
 
                   <button 
@@ -465,7 +469,13 @@ export default function SpatialHub() {
                   </div>
                   <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
                     <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos Marcados: {plannedPoints.length}</span>
-                    <button onClick={() => setPlannedPoints([])} className="text-[9px] font-bold text-red-500 uppercase hover:underline">Limpiar</button>
+                    <button 
+                      onClick={() => setPlannedPoints([])} 
+                      className="text-[9px] font-bold text-rose-500 uppercase hover:text-rose-600 flex items-center gap-1 transition-colors"
+                    >
+                      <Eraser className="w-3 h-3" />
+                      Limpiar
+                    </button>
                   </div>
                   <button 
                     onClick={handleSaveRoute} 
