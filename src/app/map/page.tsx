@@ -24,12 +24,13 @@ import {
   Pencil,
   Locate,
   Eraser,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { toast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -74,11 +75,11 @@ export default function SpatialHub() {
 
   const firestore = useFirestore();
   
-  const zonesQuery = useMemo(() => firestore ? collection(firestore, 'zones') : null, [firestore]);
-  const routesQuery = useMemo(() => firestore ? collection(firestore, 'routes') : null, [firestore]);
+  const zonesQuery = useMemo(() => firestore ? query(collection(firestore, 'zones'), orderBy('createdAt', 'desc')) : null, [firestore]);
+  const routesQuery = useMemo(() => firestore ? query(collection(firestore, 'routes'), orderBy('createdAt', 'desc')) : null, [firestore]);
   
-  const { data: zones } = useCollection(zonesQuery);
-  const { data: savedRoutes } = useCollection(routesQuery);
+  const { data: zones, loading: loadingZones } = useCollection(zonesQuery);
+  const { data: savedRoutes, loading: loadingRoutes } = useCollection(routesQuery);
 
   const activeHexColor = useMemo(() => COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6', [selectedColor]);
 
@@ -107,11 +108,11 @@ export default function SpatialHub() {
   };
 
   const handleGlobalSearch = (term: string) => {
-    const query = term.toLowerCase().trim();
-    if (!query) return;
+    const queryTerm = term.toLowerCase().trim();
+    if (!queryTerm) return;
 
     // Buscar en ciudades maestras
-    const matchedCity = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(query));
+    const matchedCity = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(queryTerm));
     if (matchedCity) {
       handleFocusPoint(matchedCity);
       setNewZoneName(matchedCity.name);
@@ -120,14 +121,14 @@ export default function SpatialHub() {
     }
 
     // Buscar en zonas guardadas
-    const matchedZone = zones?.find(z => z.name?.toLowerCase().includes(query));
+    const matchedZone = zones?.find(z => z.name?.toLowerCase().includes(queryTerm));
     if (matchedZone) {
       handleFocusPoint(matchedZone);
       toast({ title: "Zona Detectada", description: `Enfocando en registro: ${matchedZone.name}.` });
       return;
     }
 
-    toast({ title: "Sin Resultados Directos", description: `No se encontró "${term}" en territorio o registros.` });
+    toast({ title: "Sin Resultados Directos", description: `No se encontró "${term}" en el territorio.` });
   };
 
   const handleMapClick = (e: React.MouseEvent) => {
@@ -137,6 +138,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    // Lógica de proyección inversa simplificada para el centro actual
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -157,11 +159,11 @@ export default function SpatialHub() {
 
   const handleSaveZone = () => {
     if (!firestore || !newZoneName) {
-      toast({ variant: "destructive", title: "Datos Incompletos", description: "Por favor, asigna un nombre a la zona." });
+      toast({ variant: "destructive", title: "Datos Incompletos", description: "Asigna un nombre a la zona." });
       return;
     }
     if (zonePoints.length === 0) {
-      toast({ variant: "destructive", title: "Sin Perímetro", description: "Haz clic en el mapa para delimitar el área primero." });
+      toast({ variant: "destructive", title: "Sin Perímetro", description: "Haz clic en el mapa para delimitar el área." });
       return;
     }
 
@@ -176,10 +178,10 @@ export default function SpatialHub() {
     };
 
     addDoc(collection(firestore, 'zones'), zoneData)
-      .then((docRef) => {
+      .then(() => {
         toast({ 
-          title: "¡Zona Registrada!", 
-          description: `El área "${newZoneName}" se ha guardado exitosamente.`,
+          title: "Zona Registrada", 
+          description: `"${newZoneName}" se ha guardado en el sistema.`,
           action: (
             <ToastAction altText="Planear Ruta" onClick={() => {
               setActiveTab('rutas');
@@ -204,7 +206,7 @@ export default function SpatialHub() {
 
   const handleSaveRoute = () => {
     if (!firestore || !newRouteName || plannedPoints.length < 2) {
-      toast({ variant: "destructive", title: "Ruta Inválida", description: "Se requieren al menos 2 puntos para trazar una ruta." });
+      toast({ variant: "destructive", title: "Ruta Inválida", description: "Se requieren al menos 2 puntos." });
       return;
     }
 
@@ -217,7 +219,7 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Ruta Guardada", description: "La planeación logística ha sido registrada." });
+        toast({ title: "Ruta Guardada", description: "Planeación logística registrada." });
         setNewRouteName('');
         setPlannedPoints([]);
       })
@@ -235,7 +237,7 @@ export default function SpatialHub() {
     if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, coll, id));
-      toast({ title: "Registro Eliminado", description: "Los datos han sido removidos del sistema." });
+      toast({ title: "Registro Eliminado", description: "Datos removidos del sistema." });
     } catch (e) {
       console.error(e);
     }
@@ -248,24 +250,11 @@ export default function SpatialHub() {
       <aside className="w-[420px] min-w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl">
         <div className="p-6 border-b border-slate-100 bg-slate-50/50 space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">V</div>
+            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20 transform -rotate-3 hover:rotate-0 transition-all">V</div>
             <div>
-              <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">Cartografía Táctica</h2>
+              <h2 className="text-sm font-bold tracking-tight text-slate-900 uppercase">Centro de Mando</h2>
               <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase">VectraLogix Hub</p>
             </div>
-          </div>
-
-          {/* Buscador Global Superior */}
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Buscar ciudad, zona o ruta..." 
-              className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-10 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch(searchQuery)}
-            />
           </div>
 
           <div className="flex bg-slate-200/50 p-1 rounded-xl">
@@ -274,7 +263,7 @@ export default function SpatialHub() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
+                  "flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
                   (activeTab === tab.id) ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-900"
                 )}
               >
@@ -290,21 +279,26 @@ export default function SpatialHub() {
             <div className="space-y-8">
               <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Pencil className="w-3 h-3" /> Delimitar Área
+                  <Pencil className="w-3 h-3" /> Delimitar Cobertura
                 </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre / Buscar Ciudad</label>
-                    <div className="relative">
+                    <div className="relative group">
                       <input 
                         type="text" 
                         placeholder="Escribe y presiona Enter para buscar..."
-                        className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 pr-12 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm font-medium"
+                        className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 pr-12 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-medium"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleGlobalSearch(newZoneName)}
                       />
-                      <button onClick={() => handleGlobalSearch(newZoneName)} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary"><Search className="w-4 h-4" /></button>
+                      <button 
+                        onClick={() => handleGlobalSearch(newZoneName)} 
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary transition-colors"
+                      >
+                        <Search className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                   
@@ -320,21 +314,24 @@ export default function SpatialHub() {
 
                   <div className="grid grid-cols-3 gap-2">
                     <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
-                    <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="CUADRO" />
+                    <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
                     <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-600 uppercase">Puntos: {zonePoints.length}</span>
-                    <button onClick={() => setZonePoints([])} className="text-[9px] font-bold text-rose-500 uppercase flex items-center gap-1 hover:text-rose-600 transition-colors">
-                      <Eraser className="w-3 h-3" /> Limpiar
+                  <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">
+                    <span className="text-[10px] font-bold text-slate-600 uppercase">Nodos: {zonePoints.length}</span>
+                    <button 
+                      onClick={() => setZonePoints([])} 
+                      className="text-[9px] font-bold text-rose-500 uppercase flex items-center gap-1.5 hover:bg-rose-50 px-2 py-1 rounded-md transition-all"
+                    >
+                      <Eraser className="w-3.5 h-3.5" /> Limpiar
                     </button>
                   </div>
 
                   <button 
                     onClick={handleSaveZone}
                     disabled={isSaving || !newZoneName || zonePoints.length === 0}
-                    className="w-full text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 disabled:opacity-50 transition-all hover:brightness-110"
+                    className="w-full text-white py-4.5 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 disabled:opacity-50 transition-all hover:brightness-110 active:scale-95"
                     style={{ backgroundColor: activeHexColor }}
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -347,22 +344,34 @@ export default function SpatialHub() {
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
                   <List className="w-3 h-3" /> Zonas de Acción ({zones?.length || 0})
                 </h3>
-                <div className="space-y-2">
-                  {zones?.map((zone) => (
-                    <div key={zone.id} onClick={() => handleFocusPoint(zone)} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 transition-all group cursor-pointer shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">{zone.name}</p>
-                          <p className="text-[9px] text-slate-400 uppercase">{zone.type}</p>
+                <div className="space-y-2.5">
+                  {loadingZones ? (
+                    <div className="flex flex-col items-center py-10 gap-3 text-slate-300">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</p>
+                    </div>
+                  ) : zones && zones.length > 0 ? (
+                    zones.map((zone) => (
+                      <div key={zone.id} onClick={() => handleFocusPoint(zone)} className="flex items-center justify-between p-4.5 bg-white border border-slate-200 rounded-2xl hover:border-primary/40 transition-all group cursor-pointer shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{zone.name}</p>
+                            <p className="text-[9px] text-slate-400 uppercase">{zone.type}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={(e) => { e.stopPropagation(); setActiveTab('rutas'); setNewRouteName(`Ruta ${zone.name}`); }} className="p-2 hover:bg-primary/10 rounded-lg text-primary" title="Planificar Ruta"><RouteIcon className="w-4 h-4" /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete('zones', zone.id); }} className="p-2 hover:bg-red-50 rounded-lg text-red-500" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveTab('rutas'); setNewRouteName(`Ruta ${zone.name}`); }} className="p-2 hover:bg-primary/10 rounded-lg text-primary"><RouteIcon className="w-4 h-4" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); handleDelete('zones', zone.id); }} className="p-2 hover:bg-red-50 rounded-lg text-red-500"><Trash2 className="w-4 h-4" /></button>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center py-12 gap-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl opacity-50">
+                      <AlertCircle className="w-6 h-6 text-slate-300" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sin zonas registradas</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -378,21 +387,24 @@ export default function SpatialHub() {
                     <input 
                       type="text" 
                       placeholder="Ej: Entrega Norte 01..." 
-                      className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                      className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-medium"
                       value={newRouteName} 
                       onChange={(e) => setNewRouteName(e.target.value)} 
                     />
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl">
+                  <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">
                     <span className="text-[10px] font-bold text-slate-600 uppercase">Nodos: {plannedPoints.length}</span>
-                    <button onClick={() => setPlannedPoints([])} className="text-[9px] font-bold text-rose-500 uppercase flex items-center gap-1 hover:text-rose-600 transition-colors">
-                      <Eraser className="w-3 h-3" /> Limpiar
+                    <button 
+                      onClick={() => setPlannedPoints([])} 
+                      className="text-[9px] font-bold text-rose-500 uppercase flex items-center gap-1.5 hover:bg-rose-50 px-2 py-1 rounded-md transition-all"
+                    >
+                      <Eraser className="w-3.5 h-3.5" /> Limpiar
                     </button>
                   </div>
                   <button 
                     onClick={handleSaveRoute} 
                     disabled={isSaving || !newRouteName || plannedPoints.length < 2} 
-                    className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 disabled:opacity-50 transition-all"
+                    className="w-full bg-primary text-white py-4.5 rounded-xl text-xs font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 disabled:opacity-50 transition-all"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {isSaving ? 'GUARDANDO...' : 'GUARDAR PLANEACIÓN'}
@@ -404,19 +416,31 @@ export default function SpatialHub() {
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
                   <RouteIcon className="w-3 h-3" /> Rutas del Sistema ({savedRoutes?.length || 0})
                 </h3>
-                <div className="space-y-2">
-                  {savedRoutes?.map((route) => (
-                    <div key={route.id} onClick={() => handleFocusPoint(route)} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 transition-all group cursor-pointer shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><RouteIcon className="w-4 h-4" /></div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">{route.name}</p>
-                          <p className="text-[9px] text-slate-400 uppercase">{route.stops?.length || 0} Paradas</p>
-                        </div>
-                      </div>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete('routes', route.id); }} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                <div className="space-y-2.5">
+                  {loadingRoutes ? (
+                    <div className="flex flex-col items-center py-10 gap-3 text-slate-300">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest">Sincronizando...</p>
                     </div>
-                  ))}
+                  ) : savedRoutes && savedRoutes.length > 0 ? (
+                    savedRoutes.map((route) => (
+                      <div key={route.id} onClick={() => handleFocusPoint(route)} className="flex items-center justify-between p-4.5 bg-white border border-slate-200 rounded-2xl hover:border-primary/40 transition-all group cursor-pointer shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary"><RouteIcon className="w-5 h-5" /></div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-800">{route.name}</p>
+                            <p className="text-[9px] text-slate-400 uppercase">{route.stops?.length || 0} Paradas</p>
+                          </div>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete('routes', route.id); }} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center py-12 gap-3 bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl opacity-50">
+                      <AlertCircle className="w-6 h-6 text-slate-300" />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Sin rutas registradas</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -425,7 +449,7 @@ export default function SpatialHub() {
       </aside>
       
       <main ref={mapContainerRef} className="flex-1 relative bg-slate-100 overflow-hidden cursor-crosshair">
-        {/* Capa de captura de clics sobre el mapa */}
+        {/* Capa de captura de clics sobre el mapa para dibujo */}
         <div className="absolute inset-0 z-40 cursor-crosshair" onClick={handleMapClick} />
         
         <VectorMap 
@@ -441,14 +465,14 @@ export default function SpatialHub() {
         />
         
         <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-50">
-          <button onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl font-bold text-lg">+</button>
-          <button onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl font-bold text-lg">-</button>
-          <button onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }} className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all"><Crosshair className="w-5 h-5" /></button>
+          <button onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-700 hover:bg-slate-50 shadow-xl font-bold text-lg transition-all active:scale-90">+</button>
+          <button onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-700 hover:bg-slate-50 shadow-xl font-bold text-lg transition-all active:scale-90">-</button>
+          <button onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }} className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all active:scale-90"><Crosshair className="w-5 h-5" /></button>
         </div>
 
         <div className="absolute top-10 right-10 z-50">
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs" style={{ backgroundColor: activeHexColor }}>
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-white px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-[10px] uppercase tracking-widest" style={{ backgroundColor: activeHexColor }}>
+            <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-[0_0_10px_white]" />
             MODO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
           </motion.div>
         </div>
@@ -459,9 +483,9 @@ export default function SpatialHub() {
 
 function ToolButton({ active, onClick, icon: Icon, label }: any) {
   return (
-    <button onClick={onClick} className={cn("flex flex-col items-center justify-center py-4 rounded-2xl border transition-all gap-2", active ? "bg-primary/5 border-primary text-primary shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
-      <Icon className="w-4 h-4" />
-      <span className="text-[8px] font-bold uppercase tracking-widest">{label}</span>
+    <button onClick={onClick} className={cn("flex flex-col items-center justify-center py-4 rounded-2xl border transition-all gap-2 group", active ? "bg-primary/5 border-primary text-primary shadow-sm" : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50")}>
+      <Icon className={cn("w-4.5 h-4.5 transition-transform group-hover:scale-110", active && "scale-110")} />
+      <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
     </button>
   );
 }

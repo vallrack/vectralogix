@@ -90,8 +90,8 @@ export function VectorMap({
   }, [savedRoutes, lat, lng, zoom, dimensions]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-white select-none pointer-events-none transition-opacity duration-300">
-      <div className="absolute inset-0 grayscale-[0.2] contrast-[1.1] brightness-[0.95]">
+    <div className="relative w-full h-full overflow-hidden bg-slate-200 select-none pointer-events-none transition-opacity duration-300">
+      <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] brightness-[0.98]">
         <iframe
           key={`${lat}-${lng}-${displayZoom}`}
           src={mapUrl}
@@ -104,7 +104,7 @@ export function VectorMap({
         />
       </div>
 
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 via-transparent to-white/5 pointer-events-none z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 via-transparent to-white/5 pointer-events-none z-10" />
       
       <div className="absolute inset-0 pointer-events-none z-20">
         <svg 
@@ -121,21 +121,31 @@ export function VectorMap({
             if (!points || points.length === 0) return null;
 
             return (
-              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.35 }}>
+              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.4 }}>
                 {zone.type === 'polygon' && points.length > 2 ? (
                   <path 
                     d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} 
                     fill={zone.color} 
                     stroke={zone.color} 
                     strokeWidth="3" 
-                    strokeDasharray="6,3" 
+                    strokeDasharray="8,4" 
                   />
                 ) : zone.type === 'rect' ? (
-                  <rect x={points[0].x - baseSize * 5} y={points[0].y - baseSize * 4} width={baseSize * 10} height={baseSize * 8} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
+                  <rect x={points[0].x - baseSize * 5} y={points[0].y - baseSize * 4} width={baseSize * 10} height={baseSize * 8} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
                 ) : (
-                  <circle cx={points[0].x} cy={points[0].y} r={baseSize * 4} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
+                  <circle cx={points[0].x} cy={points[0].y} r={baseSize * 4} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
                 )}
-                <text x={points[0].x} y={points[0].y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="900" className="uppercase tracking-widest drop-shadow-md">{zone.name}</text>
+                <text 
+                  x={points[0].x} 
+                  y={points[0].y - 20} 
+                  textAnchor="middle" 
+                  fill={zone.color} 
+                  fontSize="11" 
+                  fontWeight="900" 
+                  className="uppercase tracking-widest drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]"
+                >
+                  {zone.name}
+                </text>
               </motion.g>
             );
           })}
@@ -146,35 +156,50 @@ export function VectorMap({
               {currentZonePath.length > 2 ? (
                 <motion.path 
                   initial={{ opacity: 0 }} 
-                  animate={{ opacity: 0.45 }}
+                  animate={{ opacity: 0.5 }}
                   d={`M ${currentZonePath.map(p => `${p.x},${p.y}`).join(' L ')} Z`} 
                   fill={activeColor}
                   stroke={activeColor}
-                  strokeWidth="2"
-                  strokeDasharray="4,4"
+                  strokeWidth="3"
+                  strokeDasharray="5,5"
+                />
+              ) : currentZonePath.length > 1 ? (
+                <line 
+                  x1={currentZonePath[0].x} y1={currentZonePath[0].y} 
+                  x2={currentZonePath[1].x} y2={currentZonePath[1].y} 
+                  stroke={activeColor} strokeWidth="3" strokeDasharray="5,5" 
                 />
               ) : null}
               {currentZonePath.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r="6" fill={activeColor} stroke="white" strokeWidth="2" />
+                <motion.circle 
+                  key={i} 
+                  initial={{ scale: 0 }} 
+                  animate={{ scale: 1 }} 
+                  cx={p.x} cy={p.y} r="8" 
+                  fill={activeColor} 
+                  stroke="white" 
+                  strokeWidth="3" 
+                  className="shadow-xl"
+                />
               ))}
             </g>
           )}
 
           {/* Rutas Guardadas (Trayectorias) */}
           {projectedSavedRoutes.map((route) => (
-            <g key={route.id} className="opacity-60">
+            <g key={route.id} className="opacity-50">
               <path
                 d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`}
                 fill="none"
                 stroke="#475569"
-                strokeWidth="2.5"
-                strokeDasharray="5,5"
+                strokeWidth="3"
+                strokeDasharray="6,6"
               />
               {route.points.map((p: any, i: number) => (
-                <circle key={i} cx={p.x} cy={p.y} r="4" fill="#475569" stroke="white" strokeWidth="1" />
+                <circle key={i} cx={p.x} cy={p.y} r="5" fill="#475569" stroke="white" strokeWidth="2" />
               ))}
               {route.points.length > 0 && (
-                <text x={route.points[0].x} y={route.points[0].y - 12} fill="#475569" fontSize="10" fontWeight="bold" className="uppercase tracking-tighter">{route.name}</text>
+                <text x={route.points[0].x} y={route.points[0].y - 15} fill="#475569" fontSize="10" fontWeight="bold" className="uppercase tracking-tight drop-shadow-sm">{route.name}</text>
               )}
             </g>
           ))}
@@ -187,28 +212,29 @@ export function VectorMap({
               d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`}
               fill="none"
               stroke="#2563eb"
-              strokeWidth="4"
-              strokeDasharray="10,5"
+              strokeWidth="5"
+              strokeDasharray="12,6"
+              className="drop-shadow-lg"
             />
           )}
 
           {/* Nodos de la Ruta Actual */}
           {currentRoutePath.map((point, i) => (
             <motion.g key={i} initial={{ scale: 0 }} animate={{ scale: 1 }}>
-              <circle cx={point.x} cy={point.y} r="7" fill="#2563eb" stroke="white" strokeWidth="2" className="shadow-lg" />
-              <text x={point.x + 10} y={point.y + 4} fill="#2563eb" fontSize="11" fontWeight="800" className="drop-shadow-md">N{i + 1}</text>
+              <circle cx={point.x} cy={point.y} r="8" fill="#2563eb" stroke="white" strokeWidth="3" className="shadow-2xl" />
+              <text x={point.x + 12} y={point.y + 4} fill="#2563eb" fontSize="12" fontWeight="900" className="drop-shadow-xl select-none">N{i + 1}</text>
             </motion.g>
           ))}
         </svg>
 
         {/* Mira Central Táctica */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-40">
-          <div className="w-24 h-24 border-2 border-primary/20 rounded-full flex items-center justify-center">
-            <div className="w-2 h-2 bg-primary rounded-full shadow-[0_0_15px_rgba(37,99,235,0.8)]" />
-            <div className="absolute w-full h-[1px] bg-primary/20" />
-            <div className="absolute h-full w-[1px] bg-primary/20" />
-            <div className="absolute w-12 h-[2px] bg-primary/40 -top-1" />
-            <div className="absolute w-12 h-[2px] bg-primary/40 -bottom-1" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-30">
+          <div className="w-28 h-28 border-2 border-primary/30 rounded-full flex items-center justify-center">
+            <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_20px_rgba(37,99,235,1)]" />
+            <div className="absolute w-full h-[1.5px] bg-primary/20" />
+            <div className="absolute h-full w-[1.5px] bg-primary/20" />
+            <div className="absolute w-14 h-[2.5px] bg-primary/40 -top-1" />
+            <div className="absolute w-14 h-[2.5px] bg-primary/40 -bottom-1" />
           </div>
         </div>
       </div>
