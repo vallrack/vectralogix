@@ -21,7 +21,8 @@ import {
   MousePointer2,
   List,
   MapPinned,
-  Route as RouteIcon
+  Route as RouteIcon,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,7 +35,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 const ZONES_TABS = [
   { id: 'zonas', label: 'Zonas', icon: Layers },
   { id: 'rutas', label: 'Planeación', icon: MapPinned },
-  { id: 'buscar', label: 'Explorar', icon: Search },
 ];
 
 const COLORS = [
@@ -78,7 +78,7 @@ export default function SpatialHub() {
 
   const searchResults = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return { savedZones: [], savedRoutes: [], mapPoints: [] };
+    if (!query) return null;
     
     const matchedZones = (zones || []).filter(z => z.name.toLowerCase().includes(query));
     const matchedRoutes = (savedRoutes || []).filter(r => r.name.toLowerCase().includes(query));
@@ -103,7 +103,7 @@ export default function SpatialHub() {
       targetLng = point.stops[0].lng;
     }
     
-    const targetZoom = point.zoom || 17; 
+    const targetZoom = point.zoom || 15; 
     
     if (targetLat !== undefined && targetLng !== undefined) {
       setViewCenter({ lat: targetLat, lng: targetLng });
@@ -112,6 +112,8 @@ export default function SpatialHub() {
         title: "Enfoque Táctico",
         description: `Visualizando: ${point.name}`,
       });
+      // Clear search after selection to return to tabs
+      setSearchQuery('');
     }
   };
 
@@ -212,9 +214,10 @@ export default function SpatialHub() {
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-body">
       <AppSidebar />
       
-      <aside className="w-[400px] min-w-[400px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
-        <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-4 mb-6">
+      <aside className="w-[420px] min-w-[420px] bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
+        {/* Sidebar Header with Search */}
+        <div className="p-6 border-b border-slate-100 bg-slate-50/50 space-y-6">
+          <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">
               V
             </div>
@@ -224,276 +227,292 @@ export default function SpatialHub() {
             </div>
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-xl">
-            {ZONES_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
-                  activeTab === tab.id 
-                    ? "bg-white text-primary shadow-sm" 
-                    : "text-slate-500 hover:text-slate-900"
-                )}
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Buscar zonas, rutas o ciudades..." 
+              className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-10 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full text-slate-400"
               >
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
+                <X className="w-3.5 h-3.5" />
               </button>
-            ))}
+            )}
           </div>
+
+          {!searchQuery && (
+            <div className="flex bg-slate-200/50 p-1 rounded-xl">
+              {ZONES_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
+                    activeTab === tab.id 
+                      ? "bg-white text-primary shadow-sm" 
+                      : "text-slate-500 hover:text-slate-900"
+                  )}
+                >
+                  <tab.icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+        {/* Dynamic Sidebar Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white">
           <AnimatePresence mode="wait">
-            {activeTab === 'zonas' && (
+            {searchQuery ? (
               <motion.div 
-                key="zonas"
-                initial={{ opacity: 0, y: 10 }}
+                key="search-results"
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <MousePointer2 className="w-3 h-3" />
-                    Delimitar Área
-                  </h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 px-2">
+                  Resultados de Búsqueda
+                </h3>
 
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Zona</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Sector Norte A..."
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                        value={newZoneName}
-                        onChange={(e) => setNewZoneName(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color de Referencia</label>
-                      <div className="flex gap-3 justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        {COLORS.map((color) => (
-                          <button
-                            key={color.id}
-                            onClick={() => setSelectedColor(color.id)}
-                            className={cn(
-                              "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-card",
-                              color.class,
-                              selectedColor === color.id ? "ring-2 ring-primary scale-110" : "opacity-40 hover:opacity-100"
-                            )}
-                          />
+                {searchResults && (
+                  <div className="space-y-6">
+                    {/* Local Database Results */}
+                    {searchResults.mapPoints.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2">Ubicaciones del Territorio</h4>
+                        {searchResults.mapPoints.map((point) => (
+                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
                         ))}
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
-                      <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
-                      <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
-                    </div>
-
-                    <button 
-                      onClick={handleSaveZone}
-                      disabled={isSaving || !newZoneName}
-                      className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'GUARDANDO...' : 'REGISTRAR ZONA'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
-                    <List className="w-3 h-3" />
-                    Zonas Activas ({zones?.length || 0})
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    {zonesLoading ? (
-                      <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
-                    ) : (
-                      zones?.map((zone) => (
-                        <div 
-                          key={zone.id} 
-                          onClick={() => handleFocusPoint(zone)}
-                          className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{zone.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{zone.type}</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
-                            }} 
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
                     )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
 
-            {activeTab === 'rutas' && (
-              <motion.div 
-                key="rutas"
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="space-y-6"
-              >
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <Navigation className="w-3 h-3" />
-                    Trazar Nueva Ruta
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 italic mb-2">Haz clic directamente sobre el mapa para añadir nodos logísticos.</p>
-                    <input 
-                      type="text" 
-                      placeholder="Nombre de la ruta estratégica..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                      value={newRouteName}
-                      onChange={(e) => setNewRouteName(e.target.value)}
-                    />
-                    
-                    <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
-                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos Marcados: {plannedPoints.length}</span>
-                      <button 
-                        onClick={() => setPlannedPoints([])}
-                        className="text-[9px] font-bold text-red-500 uppercase hover:underline"
-                      >
-                        Limpiar Mapa
-                      </button>
-                    </div>
-
-                    <button 
-                      onClick={handleSaveRoute}
-                      disabled={isSaving || !newRouteName || plannedPoints.length < 2}
-                      className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'GUARDANDO...' : 'GUARDAR PLANEACIÓN'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
-                    <RouteIcon className="w-3 h-3" />
-                    Rutas en Sistema ({savedRoutes?.length || 0})
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    {routesLoading ? (
-                      <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
-                    ) : (
-                      savedRoutes?.map((route) => (
-                        <div 
-                          key={route.id} 
-                          onClick={() => handleFocusPoint(route)}
-                          className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                              <RouteIcon className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{route.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Nodos</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (firestore) deleteDoc(doc(firestore, 'routes', route.id));
-                            }} 
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeTab === 'buscar' && (
-              <motion.div 
-                key="buscar"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="space-y-6"
-              >
-                <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
-                  <input 
-                    type="text" 
-                    placeholder="Filtrar por nombre o ubicación..." 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  {/* Local Database Results */}
-                  {searchResults.mapPoints.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2">Ubicaciones del Territorio</h4>
-                      {searchResults.mapPoints.map((point) => (
-                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Saved Zones Results */}
-                  {searchResults.savedZones.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-[9px] font-bold text-primary uppercase tracking-widest px-2">Zonas Guardadas</h4>
-                      {searchResults.savedZones.map((point) => (
-                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Saved Routes Results */}
-                  {searchResults.savedRoutes.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest px-2">Rutas Guardadas</h4>
-                      {searchResults.savedRoutes.map((point) => (
-                        <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
-                      ))}
-                    </div>
-                  )}
-
-                  {searchQuery && 
-                   searchResults.mapPoints.length === 0 && 
-                   searchResults.savedZones.length === 0 && 
-                   searchResults.savedRoutes.length === 0 && (
-                    <div className="py-20 text-center space-y-4">
-                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                        <Search className="w-8 h-8 text-slate-200" />
+                    {/* Saved Zones Results */}
+                    {searchResults.savedZones.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest px-2">Zonas Registradas</h4>
+                        {searchResults.savedZones.map((point) => (
+                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                        ))}
                       </div>
-                      <p className="text-xs text-slate-400">No se encontraron resultados tácticos.</p>
-                    </div>
-                  )}
-                </div>
+                    )}
+
+                    {/* Saved Routes Results */}
+                    {searchResults.savedRoutes.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest px-2">Planeaciones Guardadas</h4>
+                        {searchResults.savedRoutes.map((point) => (
+                          <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
+                        ))}
+                      </div>
+                    )}
+
+                    {searchResults.mapPoints.length === 0 && 
+                     searchResults.savedZones.length === 0 && 
+                     searchResults.savedRoutes.length === 0 && (
+                      <div className="py-20 text-center space-y-4">
+                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto border border-dashed border-slate-200">
+                          <Search className="w-6 h-6 text-slate-200" />
+                        </div>
+                        <p className="text-xs text-slate-400">No se encontraron objetivos tácticos.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
+            ) : (
+              <>
+                {activeTab === 'zonas' && (
+                  <motion.div 
+                    key="zonas"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-8"
+                  >
+                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                        <MousePointer2 className="w-3 h-3" />
+                        Delimitar Área
+                      </h3>
+
+                      <div className="space-y-5">
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Zona</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ej: Sector Norte A..."
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+                            value={newZoneName}
+                            onChange={(e) => setNewZoneName(e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color de Referencia</label>
+                          <div className="flex gap-3 justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                            {COLORS.map((color) => (
+                              <button
+                                key={color.id}
+                                onClick={() => setSelectedColor(color.id)}
+                                className={cn(
+                                  "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-card",
+                                  color.class,
+                                  selectedColor === color.id ? "ring-2 ring-primary scale-110 shadow-md" : "opacity-40 hover:opacity-100"
+                                )}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
+                          <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
+                          <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
+                        </div>
+
+                        <button 
+                          onClick={handleSaveZone}
+                          disabled={isSaving || !newZoneName}
+                          className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                        >
+                          <Save className="w-4 h-4" />
+                          {isSaving ? 'GUARDANDO...' : 'REGISTRAR ZONA'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
+                        <List className="w-3 h-3" />
+                        Zonas Activas ({zones?.length || 0})
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        {zonesLoading ? (
+                          <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
+                        ) : (
+                          zones?.map((zone) => (
+                            <div 
+                              key={zone.id} 
+                              onClick={() => handleFocusPoint(zone)}
+                              className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800">{zone.name}</p>
+                                  <p className="text-[9px] text-slate-400 uppercase tracking-widest">{zone.type}</p>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
+                                }} 
+                                className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeTab === 'rutas' && (
+                  <motion.div 
+                    key="rutas"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-8"
+                  >
+                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                        <Navigation className="w-3 h-3" />
+                        Trazar Nueva Ruta
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <p className="text-[10px] text-slate-500 italic mb-2">Haz clic directamente sobre el mapa para añadir nodos logísticos.</p>
+                        <input 
+                          type="text" 
+                          placeholder="Nombre de la ruta estratégica..."
+                          className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+                          value={newRouteName}
+                          onChange={(e) => setNewRouteName(e.target.value)}
+                        />
+                        
+                        <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos Marcados: {plannedPoints.length}</span>
+                          <button 
+                            onClick={() => setPlannedPoints([])}
+                            className="text-[9px] font-bold text-red-500 uppercase hover:underline"
+                          >
+                            Limpiar Mapa
+                          </button>
+                        </div>
+
+                        <button 
+                          onClick={handleSaveRoute}
+                          disabled={isSaving || !newRouteName || plannedPoints.length < 2}
+                          className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                        >
+                          <Save className="w-4 h-4" />
+                          {isSaving ? 'GUARDANDO...' : 'GUARDAR PLANEACIÓN'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
+                        <RouteIcon className="w-3 h-3" />
+                        Planeaciones Activas ({savedRoutes?.length || 0})
+                      </h3>
+                      
+                      <div className="space-y-2">
+                        {routesLoading ? (
+                          <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
+                        ) : (
+                          savedRoutes?.map((route) => (
+                            <div 
+                              key={route.id} 
+                              onClick={() => handleFocusPoint(route)}
+                              className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                  <RouteIcon className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800">{route.name}</p>
+                                  <p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Nodos</p>
+                                </div>
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (firestore) deleteDoc(doc(firestore, 'routes', route.id));
+                                }} 
+                                className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </>
             )}
           </AnimatePresence>
         </div>
@@ -566,15 +585,15 @@ function ToolButton({ active, onClick, icon: Icon, label }: any) {
 
 function SearchItem({ point, onClick, isSaved = false }: any) {
   return (
-    <div onClick={onClick} className={cn("flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group", isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300")}>
+    <div onClick={onClick} className={cn("flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group", isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm")}>
       <div className="flex items-center gap-3">
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", isSaved ? "bg-primary/10 border-primary/20 text-primary" : "bg-slate-50 border-slate-200 text-slate-400")}>
-          {isSaved ? <MapIcon className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+          {isSaved ? (point.stops ? <RouteIcon className="w-4 h-4" /> : <Layers className="w-4 h-4" />) : <MapPin className="w-4 h-4" />}
         </div>
         <div>
           <p className="text-xs font-bold text-slate-800">{point.name}</p>
           <p className="text-[9px] text-slate-400 uppercase tracking-widest">
-            {isSaved ? (point.stops ? 'Ruta' : 'Zona') : (point.type || 'Punto')}
+            {isSaved ? (point.stops ? 'Planeación' : 'Zona Táctica') : (point.type || 'Ubicación')}
           </p>
         </div>
       </div>
