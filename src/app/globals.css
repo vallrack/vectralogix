@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
+    --background: 210 20% 96%;
     --foreground: 220 30% 15%;
-    --card: 0 0% 100%;
+    --card: 210 20% 98%;
     --card-foreground: 220 30% 15%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 30% 15%;
     --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 20% 92%;
+    --secondary: 210 20% 90%;
     --secondary-foreground: 220 30% 15%;
-    --muted: 210 20% 92%;
+    --muted: 210 15% 90%;
     --muted-foreground: 215 15% 45%;
     --accent: 199 89% 48%;
     --accent-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
 }
 
 .glass-panel {
-  @apply bg-white border border-slate-200 shadow-sm transition-all duration-300;
+  @apply bg-card border border-slate-200/60 shadow-sm transition-all duration-300;
 }
 
 .glass-panel:hover {

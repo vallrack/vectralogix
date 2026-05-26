@@ -33,12 +33,12 @@ export function AppSidebar() {
 
   return (
     <div className={cn(
-      "h-screen border-r border-slate-200 flex flex-col bg-white z-50 transition-all duration-300 relative shadow-sm",
+      "h-screen border-r border-slate-200/60 flex flex-col bg-card/80 backdrop-blur-sm z-50 transition-all duration-300 relative shadow-sm",
       isCollapsed ? "w-20" : "w-64"
     )}>
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 shadow-md z-[60] hover:text-primary transition-colors"
+        className="absolute -right-3 top-24 w-6 h-6 bg-card border border-slate-200/60 rounded-full flex items-center justify-center text-slate-400 shadow-md z-[60] hover:text-primary transition-colors"
       >
         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
@@ -66,7 +66,7 @@ export function AppSidebar() {
                 "group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200",
                 isActive 
                   ? "bg-primary/10 text-primary" 
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                  : "text-slate-500 hover:bg-slate-200/50 hover:text-slate-900",
                 isCollapsed ? "justify-center px-0" : ""
               )}
               title={isCollapsed ? item.label : ""}
@@ -83,7 +83,7 @@ export function AppSidebar() {
 
       <div className="p-4 mt-auto">
         {!isCollapsed && (
-          <div className="bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-100">
+          <div className="bg-slate-200/40 p-4 rounded-2xl mb-4 border border-slate-200/60">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase">Estado Sistema</span>
               <span className="text-[10px] font-bold text-emerald-500 uppercase">Óptimo</span>
@@ -95,10 +95,10 @@ export function AppSidebar() {
         )}
 
         <div className={cn(
-          "flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-100",
+          "flex items-center gap-3 px-4 py-3 hover:bg-slate-200/50 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-200/60",
           isCollapsed ? "justify-center" : ""
         )}>
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-slate-200/60 flex items-center justify-center">
             <Settings className="w-4 h-4 text-slate-500" />
           </div>
           {!isCollapsed && <span className="text-sm font-semibold text-slate-600">Configuración</span>}

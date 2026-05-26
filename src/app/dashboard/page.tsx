@@ -19,11 +19,11 @@ export default function Dashboard() {
   const sortedDrivers = [...MOCK_DRIVERS].sort((a, b) => b.performance - a.performance);
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden font-body">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden font-body">
       <AppSidebar />
       
       <main className="flex-1 overflow-y-auto">
-        <header className="h-20 border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-10">
+        <header className="h-20 border-b border-slate-200/60 px-8 flex items-center justify-between sticky top-0 bg-card/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-6">
             <h2 className="text-xl font-headline font-bold text-slate-900">Mando Operativo</h2>
             <div className="relative group">
@@ -31,23 +31,23 @@ export default function Dashboard() {
               <input 
                 type="text" 
                 placeholder="Buscar flota, rutas o zonas..." 
-                className="bg-slate-50 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                className="bg-background border border-slate-200/60 rounded-xl py-2 pl-10 pr-4 text-sm w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 relative transition-colors text-slate-500">
+            <button className="p-2.5 rounded-xl border border-slate-200/60 hover:bg-slate-200/50 relative transition-colors text-slate-500">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full ring-2 ring-white" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full ring-2 ring-card" />
             </button>
-            <div className="h-8 w-px bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200/60" />
             <div className="flex items-center gap-3 pl-2">
               <div className="text-right">
                 <p className="text-sm font-bold text-slate-900">Cmdte. J. Vance</p>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">General de Flota</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-slate-200 overflow-hidden ring-2 ring-white shadow-sm">
+              <div className="w-10 h-10 rounded-xl bg-slate-200/60 overflow-hidden ring-2 ring-card shadow-sm">
                 <img src="https://picsum.photos/seed/admin/100/100" alt="Avatar" className="w-full h-full object-cover" />
               </div>
             </div>
@@ -65,7 +65,7 @@ export default function Dashboard() {
                   <p className="text-sm text-slate-500">Métricas históricas y carga predictiva.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="px-4 py-1.5 rounded-lg border border-slate-200 text-xs font-bold hover:bg-slate-50 text-slate-600 transition-colors">SEMANAL</button>
+                  <button className="px-4 py-1.5 rounded-lg border border-slate-200/60 text-xs font-bold hover:bg-slate-200/50 text-slate-600 transition-colors">SEMANAL</button>
                   <button className="px-4 py-1.5 rounded-lg bg-primary text-white text-xs font-bold shadow-lg shadow-primary/20">MENSUAL</button>
                 </div>
               </div>
@@ -79,7 +79,7 @@ export default function Dashboard() {
                         <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false} 
@@ -112,8 +112,8 @@ export default function Dashboard() {
                   <div key={driver.id} className="flex items-center justify-between group cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className="relative">
-                        <img src={driver.avatar} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-white shadow-sm" alt="" />
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white border-2 border-primary rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
+                        <img src={driver.avatar} className="w-12 h-12 rounded-2xl object-cover ring-2 ring-card shadow-sm" alt="" />
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-card border-2 border-primary rounded-full flex items-center justify-center text-[10px] font-bold text-primary">
                           {i + 1}
                         </div>
                       </div>
@@ -130,7 +130,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              <button className="w-full mt-8 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
+              <button className="w-full mt-8 py-3 rounded-2xl bg-slate-200/40 border border-slate-200/60 text-sm font-bold text-slate-600 hover:bg-slate-200/80 transition-all flex items-center justify-center gap-2">
                 VER TODA LA FLOTA
                 <ArrowUpRight className="w-4 h-4" />
               </button>
