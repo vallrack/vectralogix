@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Motor de geocodificación de alta disponibilidad con Ejército de IA.
+ * @fileOverview Motor de geocodificación de alta disponibilidad con Ejército de IA Redundante.
  */
 
 import {ai} from '@/ai/genkit';
@@ -33,22 +33,22 @@ const geocodePrompt = ai.definePrompt({
   name: 'geocodePrompt',
   input: { schema: GeocodeInputSchema },
   output: { schema: GeocodeOutputSchema },
-  prompt: `Eres un experto en geografía colombiana para VectraLogix.
+  prompt: `Eres un experto en geografía y nomenclatura urbana colombiana para VectraLogix.
   
   Convierte la consulta del usuario en coordenadas GPS precisas.
   Consulta: {{{query}}}
   
   Instrucciones:
   1. Identifica el lugar más probable en Colombia.
-  2. Maneja direcciones exactas y barrios.
+  2. Maneja direcciones exactas (Calles, Carreras, Transversales) y barrios/sectores.
   3. Provee Latitud y Longitud precisas.
-  4. Sugiere zoom táctico.`,
+  4. Sugiere zoom táctico según la precisión de la búsqueda.`,
 });
 
 export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeResponse> {
-  // Ejército de IA: Intentamos con todos los modelos disponibles en cascada
+  // EJÉRCITO DE IA: Cascada de modelos para garantizar respuesta.
   const models = [
-    'googleai/gemini-2.5-flash',
+    'googleai/gemini-2.0-flash',
     'googleai/gemini-1.5-flash',
     'googleai/gemini-1.5-pro'
   ];
@@ -63,8 +63,9 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
       if (output) return { success: true, data: output };
     } catch (error: any) {
       lastError = error;
-      console.warn(`EJÉRCITO DE IA: Modelo ${model} no disponible, saltando al siguiente nivel de reserva...`);
+      console.warn(`REDUNDANCIA IA: Modelo ${model} falló, escalando al siguiente nivel...`);
       
+      // Si es un error de API Key bloqueada, intentamos con el siguiente modelo.
       if (error.status === 403 || error.message?.includes('403') || error.message?.includes('leaked')) {
         continue;
       }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -57,10 +58,10 @@ export default function RoutePlanning() {
         averageVehicleSpeedKmh: 45,
       });
       setResult(data);
-      toast({ title: "Ruta Optimizada", description: "La IA redundante ha generado la secuencia más eficiente." });
+      toast({ title: "Ruta Optimizada", description: "El ejército de IA ha generado la secuencia más eficiente." });
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Fallo de Sistema", description: "No se pudo completar la optimización tras agotar los modelos de respaldo." });
+      toast({ variant: "destructive", title: "Fallo de Sistema", description: "No se pudo completar la optimización tras agotar los modelos de reserva." });
     } finally {
       setIsOptimizing(false);
     }
@@ -80,7 +81,7 @@ export default function RoutePlanning() {
         <header className="flex justify-between items-start mb-12">
           <div>
             <h1 className="text-3xl font-headline font-bold mb-2 text-slate-900">Auto-Route Intelligence</h1>
-            <p className="text-muted-foreground font-medium">Planificación autónoma con IA redundante de alta disponibilidad.</p>
+            <p className="text-muted-foreground font-medium">Planificación autónoma con enjambre de IA de alta disponibilidad.</p>
           </div>
           <div className="flex gap-4">
             <Button 
@@ -89,7 +90,7 @@ export default function RoutePlanning() {
               className="bg-primary px-8 py-6 rounded-2xl text-white font-bold text-sm shadow-xl shadow-primary/30 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 h-auto"
             >
               {isOptimizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
-              {isOptimizing ? 'CONMUTANDO MODELOS...' : 'EJECUTAR OPTIMIZADOR'}
+              {isOptimizing ? 'DESPLEGANDO EJÉRCITO...' : 'EJECUTAR OPTIMIZADOR'}
             </Button>
           </div>
         </header>
@@ -143,8 +144,8 @@ export default function RoutePlanning() {
                   <ShieldCheck className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motor de IA</p>
-                  <p className="text-sm font-bold text-slate-800">IA Redundante Activa</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estatus de IA</p>
+                  <p className="text-sm font-bold text-slate-800">Enjambre Redundante Activo</p>
                   <p className="text-[9px] text-emerald-600 font-black uppercase">Flash | Flash | Pro</p>
                 </div>
               </div>
