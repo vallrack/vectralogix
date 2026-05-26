@@ -80,8 +80,8 @@ export default function SpatialHub() {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return null;
     
-    const matchedZones = (zones || []).filter(z => z.name.toLowerCase().includes(query));
-    const matchedRoutes = (savedRoutes || []).filter(r => r.name.toLowerCase().includes(query));
+    const matchedZones = (zones || []).filter(z => z.name?.toLowerCase().includes(query));
+    const matchedRoutes = (savedRoutes || []).filter(r => r.name?.toLowerCase().includes(query));
     const matchedMapPoints = COLOMBIA_DATABASE.filter(l => l.name.toLowerCase().includes(query));
     
     return { 
@@ -145,7 +145,10 @@ export default function SpatialHub() {
   };
 
   const handleSaveZone = () => {
-    if (!firestore || !newZoneName) return;
+    if (!firestore || !newZoneName) {
+      toast({ variant: "destructive", title: "Error", description: "Debes asignar un nombre a la zona." });
+      return;
+    }
     setIsSaving(true);
     const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
     
@@ -249,11 +252,10 @@ export default function SpatialHub() {
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
-                  setSearchQuery('');
                 }}
                 className={cn(
                   "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
-                  (activeTab === tab.id && !searchQuery)
+                  (activeTab === tab.id)
                     ? "bg-white text-primary shadow-sm" 
                     : "text-slate-500 hover:text-slate-900"
                 )}
@@ -265,13 +267,14 @@ export default function SpatialHub() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white relative">
           <AnimatePresence mode="wait">
             {searchQuery ? (
               <motion.div 
                 key="search-results"
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
                 className="space-y-6"
               >
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 px-2">
@@ -321,14 +324,15 @@ export default function SpatialHub() {
                 </div>
               </motion.div>
             ) : (
-              <>
+              <motion.div
+                key="tab-content"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="space-y-8"
+              >
                 {activeTab === 'zonas' && (
-                  <motion.div 
-                    key="zonas"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="space-y-8"
-                  >
+                  <div className="space-y-8">
                     <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                       <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                         <MousePointer2 className="w-3 h-3" />
@@ -418,16 +422,11 @@ export default function SpatialHub() {
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
 
                 {activeTab === 'rutas' && (
-                  <motion.div 
-                    key="rutas"
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="space-y-8"
-                  >
+                  <div className="space-y-8">
                     <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                       <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                         <Navigation className="w-3 h-3" />
@@ -504,9 +503,9 @@ export default function SpatialHub() {
                         )}
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -533,19 +532,19 @@ export default function SpatialHub() {
         <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-30">
           <button 
             onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))}
-            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg"
+            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg pointer-events-auto"
           >
             +
           </button>
           <button 
             onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))}
-            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg"
+            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg pointer-events-auto"
           >
             -
           </button>
           <button 
             onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}
-            className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all"
+            className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all pointer-events-auto"
           >
             <Crosshair className="w-5 h-5" />
           </button>
