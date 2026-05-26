@@ -1,8 +1,8 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSy...", // Este valor será reemplazado por la configuración real del proyecto
+  apiKey: "AIzaSyAbFVb_LoMvtEL4sdMxPe9XIo1kuICrsEA",
   authDomain: "studio-211766692-3f955.firebaseapp.com",
   projectId: "studio-211766692-3f955",
-  storageBucket: "studio-211766692-3f955.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
+  storageBucket: "studio-211766692-3f955.firebasestorage.app",
+  messagingSenderId: "799004763044",
+  appId: "1:799004763044:web:1ea6b2a9026b13007e1731"
 };
