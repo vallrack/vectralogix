@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "driver-1",
+      "description": "Professional driver portrait",
+      "imageUrl": "https://picsum.photos/seed/driver1/200/200",
+      "imageHint": "driver portrait"
+    },
+    {
+      "id": "driver-2",
+      "description": "Professional driver portrait",
+      "imageUrl": "https://picsum.photos/seed/driver2/200/200",
+      "imageHint": "driver portrait"
+    },
+    {
+      "id": "hero-logistics",
+      "description": "Futuristic logistics command center",
+      "imageUrl": "https://picsum.photos/seed/logistics/1200/800",
+      "imageHint": "logistics center"
+    }
+  ]
+}
