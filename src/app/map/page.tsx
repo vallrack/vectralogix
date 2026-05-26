@@ -21,7 +21,6 @@ import {
   MousePointer2,
   List,
   MapPinned,
-  LocateFixed,
   Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -86,13 +85,29 @@ export default function SpatialHub() {
     
     if (lat !== undefined && lng !== undefined) {
       setViewCenter({ lat, lng });
-      setMapZoom(17); 
+      setMapZoom(17.5); 
       setShowSearchResults(false);
       setSearchQuery(point.name || '');
       toast({
-        title: "Enfocando Zona",
-        description: `Explorando el sector: ${point.name || 'Seleccionado'}`,
+        title: "Localización Exitosa",
+        description: `Posicionando mapa en: ${point.name || 'Coordenadas seleccionadas'}`,
       });
+    }
+  };
+
+  const handleEditorKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && newZoneName.trim()) {
+      const match = COLOMBIA_DATABASE.find(c => c.name.toLowerCase() === newZoneName.toLowerCase().trim()) 
+                 || (zones || []).find(z => z.name.toLowerCase() === newZoneName.toLowerCase().trim());
+      
+      if (match) {
+        handleFocusPoint(match);
+      } else {
+        toast({
+          title: "Búsqueda de Referencia",
+          description: `No se encontró una ciudad exacta para "${newZoneName}", pero puedes dibujar el área manualmente.`,
+        });
+      }
     }
   };
 
@@ -103,7 +118,6 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Cálculo de precisión basado en la escala de Mercator local
     const latRad = viewCenter.lat * Math.PI / 180;
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
@@ -125,7 +139,7 @@ export default function SpatialHub() {
     setPlannedPoints([...plannedPoints, newPoint]);
     toast({ 
       title: "Nodo Fijado", 
-      description: "Punto de ruta establecido con precisión en el mapa." 
+      description: "Punto de ruta establecido con precisión." 
     });
   };
 
@@ -148,7 +162,6 @@ export default function SpatialHub() {
           description: "Perímetro guardado. Iniciando exploración de alta resolución." 
         });
         setNewZoneName('');
-        // Efecto de zoom automático táctico tras guardar
         setMapZoom(18); 
       })
       .catch(async () => {
@@ -224,13 +237,20 @@ export default function SpatialHub() {
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Zona</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ej: Zona Norte Operativa"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
-                        value={newZoneName}
-                        onChange={(e) => setNewZoneName(e.target.value)}
-                      />
+                      <div className="relative group">
+                        <input 
+                          type="text" 
+                          placeholder="Escribe una ciudad y presiona Enter..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all pr-10"
+                          value={newZoneName}
+                          onKeyDown={handleEditorKeyDown}
+                          onChange={(e) => setNewZoneName(e.target.value)}
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors">
+                          <Search className="w-4 h-4" />
+                        </div>
+                      </div>
+                      <p className="text-[9px] text-slate-400 mt-1 italic px-1">Presiona Enter para geolocalizar automáticamente.</p>
                     </div>
                     
                     <div className="space-y-2">
@@ -413,7 +433,6 @@ export default function SpatialHub() {
           containerRef={mapContainerRef}
         />
         
-        {/* Buscador Flotante Estilo Moderno */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4">
            <div className="relative">
               <div className="bg-white border border-slate-200 rounded-2xl p-2 shadow-xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
@@ -429,6 +448,11 @@ export default function SpatialHub() {
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setShowSearchResults(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchResults.mapPoints.length > 0) {
+                      handleFocusPoint(searchResults.mapPoints[0]);
+                    }
                   }}
                 />
                 <button 
