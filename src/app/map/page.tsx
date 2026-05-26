@@ -119,16 +119,19 @@ export default function SpatialHub() {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
       
-      // Auto-fill name if searching to delimit
-      if (activeTab === 'zonas') {
-        setNewZoneName(point.name || '');
-      } else if (activeTab === 'rutas') {
-        setNewRouteName(point.name || '');
+      // Sincronización proactiva: Si buscaste una ciudad, preparamos el formulario
+      if (point.type === 'Ciudad' || point.type === 'Capital') {
+        setNewZoneName(point.name);
+      } else {
+        // Si es una zona guardada, solo la visualizamos
+        if (activeTab === 'zonas') {
+          setNewZoneName(point.name || '');
+        }
       }
 
       toast({
-        title: "Enfoque Táctico",
-        description: `Visualizando: ${point.name}`,
+        title: "Objetivo Localizado",
+        description: `Enfocando: ${point.name}. Puedes empezar a delimitar.`,
       });
       setSearchQuery('');
     }
@@ -172,28 +175,28 @@ export default function SpatialHub() {
 
   const handleSaveZone = () => {
     if (!firestore || !newZoneName) {
-      toast({ variant: "destructive", title: "Error", description: "Debes asignar un nombre a la zona." });
+      toast({ variant: "destructive", title: "Error", description: "Asigna un nombre para registrar el área." });
       return;
     }
+    if (zonePoints.length === 0) {
+      toast({ variant: "destructive", title: "Sin Geometría", description: "Haz clic en el mapa para delimitar el área primero." });
+      return;
+    }
+
     setIsSaving(true);
     
-    // If no points drawn, use map center
-    const finalCoordinates = zonePoints.length > 0 
-      ? zonePoints.map(p => ({ lat: p.lat, lng: p.lng }))
-      : [{ lat: viewCenter.lat, lng: viewCenter.lng }];
-
     const zoneData = {
       name: newZoneName,
       type: activeTool,
       color: activeHexColor,
-      coordinates: finalCoordinates,
+      coordinates: zonePoints.map(p => ({ lat: p.lat, lng: p.lng })),
       zoom: mapZoom,
       createdAt: serverTimestamp()
     };
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Guardada", description: "Perímetro registrado exitosamente." });
+        toast({ title: "Zona Registrada", description: `El área "${newZoneName}" está activa.` });
         setNewZoneName('');
         setZonePoints([]);
       })
@@ -212,8 +215,8 @@ export default function SpatialHub() {
     if (!firestore || !newRouteName || plannedPoints.length < 2) {
       toast({ 
         variant: "destructive", 
-        title: "Validación Fallida", 
-        description: "Nombre y al menos 2 nodos requeridos." 
+        title: "Trazado Incompleto", 
+        description: "Necesitas al menos 2 nodos sobre el mapa." 
       });
       return;
     }
@@ -227,7 +230,7 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Ruta Guardada", description: "Secuencia logística almacenada." });
+        toast({ title: "Planeación Guardada", description: "Trayectoria logística registrada exitosamente." });
         setNewRouteName('');
         setPlannedPoints([]);
       })
@@ -297,20 +300,20 @@ export default function SpatialHub() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white relative">
-          <AnimatePresence mode="wait">
-            {searchQuery ? (
+          <AnimatePresence>
+            {searchQuery && (
               <motion.div 
                 key="search-results"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-4"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-4 mb-6 border-b border-slate-100 pb-6 overflow-hidden"
               >
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 px-2">
                   <Target className="w-3 h-3" />
-                  Resultados Tácticos
+                  Resultados de Búsqueda
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar px-1">
                   {searchResults?.mapPoints.map((point) => (
                     <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
                   ))}
@@ -321,12 +324,11 @@ export default function SpatialHub() {
                     <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
                   ))}
                   {searchResults?.mapPoints.length === 0 && searchResults?.savedZones.length === 0 && searchResults?.savedRoutes.length === 0 && (
-                    <p className="text-[10px] text-slate-400 italic px-2">No se encontraron objetivos.</p>
+                    <p className="text-[10px] text-slate-400 italic px-2">No se encontraron objetivos en el territorio.</p>
                   )}
                 </div>
-                <div className="h-px bg-slate-100 mx-2" />
               </motion.div>
-            ) : null}
+            )}
           </AnimatePresence>
 
           <div className="space-y-8">
@@ -376,13 +378,13 @@ export default function SpatialHub() {
                     <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-center">
                       <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Puntos Dibujados: {zonePoints.length}</p>
                       {zonePoints.length > 0 && (
-                        <button onClick={() => setZonePoints([])} className="text-[8px] text-red-500 font-bold uppercase mt-1 hover:underline">Reiniciar Dibujo</button>
+                        <button onClick={() => setZonePoints([])} className="text-[8px] text-red-500 font-bold uppercase mt-1 hover:underline">REINICIAR DIBUJO</button>
                       )}
                     </div>
 
                     <button 
                       onClick={handleSaveZone}
-                      disabled={isSaving || !newZoneName}
+                      disabled={isSaving || !newZoneName || zonePoints.length === 0}
                       className="w-full text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
                       style={{ backgroundColor: activeHexColor }}
                     >
@@ -395,7 +397,7 @@ export default function SpatialHub() {
                 <div className="space-y-4">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
                     <List className="w-3 h-3" />
-                    Zonas Activas ({zones?.length || 0})
+                    Zonas Registradas ({zones?.length || 0})
                   </h3>
                   
                   <div className="space-y-2">
@@ -441,7 +443,7 @@ export default function SpatialHub() {
                   </h3>
                   
                   <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 italic mb-2">Haz clic directamente sobre el mapa para añadir nodos logísticos.</p>
+                    <p className="text-[10px] text-slate-500 italic mb-2">Haz clic sobre el mapa para marcar los nodos de entrega.</p>
                     <input 
                       type="text" 
                       placeholder="Nombre de la ruta estratégica..."
@@ -523,7 +525,7 @@ export default function SpatialHub() {
           "cursor-crosshair ring-inset ring-4 ring-primary/5"
         )}
       >
-        {/* Capa de captura de clics */}
+        {/* Capa de captura de clics tácticos */}
         <div 
           className="absolute inset-0 z-40 cursor-crosshair"
           onClick={handleMapClick}
@@ -589,7 +591,7 @@ function ToolButton({ active, onClick, icon: Icon, label }: any) {
 
 function SearchItem({ point, onClick, isSaved = false }: any) {
   return (
-    <div onClick={onClick} className={cn("flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group", isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm")}>
+    <div onClick={onClick} className={cn("flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group mb-2", isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300 shadow-sm")}>
       <div className="flex items-center gap-3">
         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", isSaved ? "bg-primary/10 border-primary/20 text-primary" : "bg-slate-50 border-slate-200 text-slate-400")}>
           {isSaved ? (point.stops ? <Target className="w-4 h-4" /> : <Layers className="w-4 h-4" />) : <MapPin className="w-4 h-4" />}
