@@ -4,7 +4,7 @@
 import React, { useState, useMemo } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query } from 'firebase/firestore';
 import { 
   Search, 
   Filter, 
@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function FleetControl() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,7 +40,7 @@ export default function FleetControl() {
     driver.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddDriver = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddDriver = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firestore) return;
 
@@ -52,16 +54,20 @@ export default function FleetControl() {
       createdAt: new Date().toISOString()
     };
 
-    try {
-      await addDoc(collection(firestore, 'drivers'), driverData);
-      toast({ title: "Unidad Registrada", description: "El conductor ha sido añadido a la flota." });
-      setOpen(false);
-    } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo registrar la unidad." });
-    } finally {
-      setIsSaving(false);
-    }
+    addDoc(collection(firestore, 'drivers'), driverData)
+      .then(() => {
+        toast({ title: "Unidad Registrada", description: "El conductor ha sido añadido a la flota." });
+        setOpen(false);
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'drivers',
+          operation: 'create',
+          requestResourceData: driverData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setIsSaving(false));
   };
 
   return (

@@ -1,15 +1,16 @@
+
 {
   "entities": {
     "Zone": {
       "title": "Zona Geográfica",
-      "description": "Representa una zona delimitada en el mapa por el usuario. Permitir total libertad de lectura/escritura a operadores.",
+      "description": "Representa una zona delimitada en el mapa. Acceso total de lectura/escritura para operadores autenticados.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
         "type": { "type": "string", "enum": ["polygon", "rect", "circle"] },
         "color": { "type": "string" },
-        "coordinates": { "type": "array", "description": "Lista de puntos lat/lng que definen la zona." },
+        "coordinates": { "type": "array", "description": "Lista de puntos lat/lng." },
         "zoom": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -17,7 +18,7 @@
     },
     "Route": {
       "title": "Ruta de Entrega",
-      "description": "Una secuencia de puntos optimizada por IA. Libertad de gestión total para operadores.",
+      "description": "Secuencia de paradas optimizada. Acceso total de lectura/escritura para operadores autenticados.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -31,7 +32,7 @@
     },
     "Driver": {
       "title": "Conductor de Flota",
-      "description": "Personal operativo con acceso irrestricto de gestión.",
+      "description": "Personal operativo. Acceso total de lectura/escritura para operadores autenticados.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -46,7 +47,7 @@
     },
     "Order": {
       "title": "Pedido Logístico",
-      "description": "Envío operativo gestionable con libertad total por cualquier operador autenticado.",
+      "description": "Envío gestionable. Acceso total de lectura/escritura para operadores autenticados.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -66,19 +67,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Zonas de cobertura táctica. Acceso total de lectura/escritura para usuarios autenticados."
+      "description": "Zonas tácticas. Lectura/Escritura abierta para usuarios logueados."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Planeación logística por IA. Acceso total de lectura/escritura para usuarios autenticados."
+      "description": "Planeación logística. Lectura/Escritura abierta para usuarios logueados."
     },
     "/drivers/{driverId}": {
       "schema": "#/backend/entities/Driver",
-      "description": "Gestión de flota. Acceso total de lectura/escritura para usuarios autenticados."
+      "description": "Gestión de flota. Lectura/Escritura abierta para usuarios logueados."
     },
     "/orders/{orderId}": {
       "schema": "#/backend/entities/Order",
-      "description": "Pedidos en curso. Acceso total de lectura/escritura para usuarios autenticados."
+      "description": "Pedidos activos. Lectura/Escritura abierta para usuarios logueados."
     }
   }
 }

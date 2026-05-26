@@ -1,9 +1,9 @@
+
 'use client';
 
 /**
- * @fileOverview Inicialización de Firebase con reglas de seguridad globales.
- * Acceso total para operadores autenticados en: zones, routes, drivers, orders.
- * Implementación de persistencia y sincronización en tiempo real.
+ * @fileOverview Inicialización de Firebase con reglas de seguridad dinámicas.
+ * Acceso total habilitado para colecciones: zones, routes, drivers, orders.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';

@@ -4,11 +4,10 @@
 import React, { useState, useMemo } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { useFirestore, useCollection } from '@/firebase';
-import { collection, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query } from 'firebase/firestore';
 import { 
   Package, 
   Search, 
-  Filter, 
   ArrowUpRight, 
   Clock, 
   CheckCircle2, 
@@ -23,13 +22,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { geocodeLocation } from '@/ai/flows/geocode-location';
+import { cn } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function OrdersPage() {
   const [isSaving, setIsSaving] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -59,7 +59,6 @@ export default function OrdersPage() {
     const formData = new FormData(e.currentTarget);
     const address = formData.get('address') as string;
     
-    // Georeferenciar antes de guardar
     let lat = 0, lng = 0;
     try {
       const geo = await geocodeLocation({ query: address });
@@ -68,7 +67,7 @@ export default function OrdersPage() {
         lng = geo.data.lng;
       }
     } catch (e) {
-      console.warn("Geocodificación fallida para el pedido, se guardará sin coordenadas exactas.");
+      console.warn("Geocodificación fallida para el pedido.");
     }
 
     const orderData = {
@@ -80,15 +79,20 @@ export default function OrdersPage() {
       createdAt: new Date().toISOString()
     };
 
-    try {
-      await addDoc(collection(firestore, 'orders'), orderData);
-      toast({ title: "Pedido Registrado", description: "Envío programado en la cola logística." });
-      setOpen(false);
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo crear el pedido." });
-    } finally {
-      setIsSaving(false);
-    }
+    addDoc(collection(firestore, 'orders'), orderData)
+      .then(() => {
+        toast({ title: "Pedido Registrado", description: "Envío programado en la cola logística." });
+        setOpen(false);
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'orders',
+          operation: 'create',
+          requestResourceData: orderData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => setIsSaving(false));
   };
 
   return (
