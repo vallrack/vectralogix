@@ -21,7 +21,8 @@ import {
   MousePointer2,
   List,
   MapPinned,
-  LocateFixed
+  LocateFixed,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -91,7 +92,7 @@ export default function SpatialHub() {
       setSearchQuery(point.name);
       toast({ 
         title: `Geo-Lock: ${point.name}`, 
-        description: `Posicionando cámara en coordenadas de análisis.` 
+        description: `Posicionando cámara en coordenadas de análisis táctico.` 
       });
     }
   };
@@ -104,7 +105,7 @@ export default function SpatialHub() {
       toast({ 
         variant: "destructive",
         title: "Ubicación no encontrada", 
-        description: "Intente con ciudades principales de Colombia." 
+        description: "Intente con ciudades principales de Colombia para geolocalización." 
       });
     }
   };
@@ -123,8 +124,9 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Estratégica Guardada", description: "Perímetro registrado y enfocado." });
+        toast({ title: "Zona Estratégica Guardada", description: "Perímetro registrado. Iniciando zoom de exploración." });
         setNewZoneName('');
+        // Efecto de zoom automático para explorar la zona creada
         setMapZoom(17); 
       })
       .catch(async () => {
@@ -145,16 +147,18 @@ export default function SpatialHub() {
       lng: viewCenter.lng
     };
     setPlannedPoints([...plannedPoints, newPoint]);
-    toast({ title: "Punto de Ruta Fijado", description: "El nodo ha sido añadido a la planeación actual." });
+    toast({ 
+      title: "Punto de Ruta Fijado", 
+      description: "Añadido a la planeación estratégica. Trazando vector de ruta." 
+    });
   };
 
-  // Manejador de scroll para el mapa
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheelZoom = (e: React.WheelEvent) => {
     const delta = e.deltaY;
     if (delta > 0) {
-      setMapZoom(prev => Math.max(prev - 1, 5));
+      setMapZoom(prev => Math.max(prev - 0.5, 5));
     } else {
-      setMapZoom(prev => Math.min(prev + 1, 18));
+      setMapZoom(prev => Math.min(prev + 0.5, 18));
     }
   };
 
@@ -165,12 +169,12 @@ export default function SpatialHub() {
       <aside className="w-[420px] min-w-[420px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20 shadow-2xl relative">
         <div className="p-6 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl shadow-xl shadow-primary/30 rotate-3">
+            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl shadow-xl shadow-primary/30 rotate-3 transition-transform hover:rotate-0">
               V
             </div>
             <div>
               <h2 className="text-sm font-bold tracking-tight text-white uppercase">Vectra Control Room</h2>
-              <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase">Cartografía Estratégica</p>
+              <p className="text-[10px] text-primary font-bold tracking-[0.2em] uppercase">Cartografía Táctica</p>
             </div>
           </div>
 
@@ -206,16 +210,16 @@ export default function SpatialHub() {
                 <div className="glass-panel rounded-[32px] p-7 space-y-7 bg-[#161B22]/60 border-primary/10">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                     <MousePointer2 className="w-3 h-3" />
-                    Editor de Cartografía
+                    Editor de Perímetros
                   </h3>
 
                   <div className="space-y-5">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-muted-foreground uppercase ml-1">Nombre de la Zona</label>
+                      <label className="text-[9px] font-bold text-muted-foreground uppercase ml-1">Geolocalizar Lugar</label>
                       <div className="relative group">
                         <input 
                           type="text" 
-                          placeholder="Escriba lugar (ej: Bello)..."
+                          placeholder="Buscar ciudad (ej: Medellín)..."
                           className="w-full bg-black/40 border border-white/10 rounded-2xl py-4 pl-5 pr-12 text-xs focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-muted-foreground/30 text-white"
                           value={newZoneName}
                           onChange={(e) => setNewZoneName(e.target.value)}
@@ -248,9 +252,9 @@ export default function SpatialHub() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setMapZoom(16); }} icon={Hexagon} label="POLÍGONO" />
-                      <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); setMapZoom(16); }} icon={Square} label="ÁREA" />
-                      <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); setMapZoom(16); }} icon={Circle} label="RADIO" />
+                      <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); }} icon={Hexagon} label="POLÍGONO" />
+                      <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); }} icon={Square} label="ÁREA" />
+                      <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); }} icon={RADIO} label="RADIO" />
                     </div>
 
                     <button 
@@ -259,7 +263,7 @@ export default function SpatialHub() {
                       className="w-full bg-primary text-white py-5 rounded-[24px] text-xs font-bold flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-primary/20 disabled:opacity-50"
                     >
                       <Save className="w-4 h-4" />
-                      {isSaving ? 'REGISTRANDO...' : 'REGISTRAR ZONA'}
+                      {isSaving ? 'REGISTRANDO...' : 'REGISTRAR Y EXPLORAR'}
                     </button>
                   </div>
                 </div>
@@ -267,7 +271,7 @@ export default function SpatialHub() {
                 <div className="space-y-4">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 px-2">
                     <List className="w-3 h-3" />
-                    Zonas Activas ({zones?.length || 0})
+                    Zonas Estratégicas ({zones?.length || 0})
                   </h3>
                   
                   <div className="space-y-3">
@@ -284,7 +288,7 @@ export default function SpatialHub() {
                             <div className="w-2 h-12 rounded-full shadow-lg" style={{ backgroundColor: zone.color }} />
                             <div>
                               <p className="text-xs font-bold text-white/90">{zone.name}</p>
-                              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type} • Geo-Enfocado</p>
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type} • Análisis Activo</p>
                             </div>
                           </div>
                           <button 
@@ -313,24 +317,27 @@ export default function SpatialHub() {
                 className="space-y-6"
               >
                 <div className="glass-panel p-6 rounded-[32px] border-accent/20 bg-accent/5">
-                  <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-4">Planeación de Nodos</h3>
-                  <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">Ubique el puntero del mapa sobre la zona analizada y añada nodos estratégicos.</p>
+                  <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Trazado de Nodos
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">Posicione el centro del mapa sobre el punto deseado y fije un nodo para trazar el vector de ruta.</p>
                   
                   <button 
                     onClick={addPlanningPoint}
                     className="w-full bg-accent text-white py-4 rounded-2xl text-[10px] font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-xl shadow-accent/20"
                   >
                     <MapPin className="w-4 h-4" />
-                    AÑADIR NODO DE RUTA
+                    FIJAR NODO ESTRATÉGICO
                   </button>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">RUTAS EN TRAZADO ({plannedPoints.length})</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">PLANES DE RUTA ({plannedPoints.length})</h3>
                   {plannedPoints.length === 0 ? (
                     <div className="py-20 border-2 border-dashed border-white/5 rounded-[32px] flex flex-col items-center text-center px-8">
                        <Navigation className="w-10 h-10 text-white/5 mb-4" />
-                       <p className="text-[11px] text-muted-foreground">Utilice la herramienta para marcar nodos dentro de su zona operativa.</p>
+                       <p className="text-[11px] text-muted-foreground">Inicie el trazado fijando nodos dentro de su perímetro operativo.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -365,7 +372,7 @@ export default function SpatialHub() {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Buscar ciudad o zona..." 
+                    placeholder="Explorar territorio colombiano..." 
                     className="w-full bg-black/40 border border-white/10 rounded-[20px] py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all text-white"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -373,9 +380,9 @@ export default function SpatialHub() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">RESULTADOS GEOGRÁFICOS</h3>
+                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground px-2">LOCALIZACIONES ENCONTRADAS</h3>
                   {searchResults.mapPoints.length === 0 && searchResults.saved.length === 0 && searchQuery ? (
-                    <p className="text-xs text-muted-foreground text-center py-10 italic">No hay resultados para esta ubicación.</p>
+                    <p className="text-xs text-muted-foreground text-center py-10 italic">Sin resultados para esta geolocalización.</p>
                   ) : (
                     <div className="space-y-3">
                       {searchResults.mapPoints.map((point) => (
@@ -394,10 +401,10 @@ export default function SpatialHub() {
         
         <div className="p-6 border-t border-white/5 bg-black/40">
            <div className="flex items-center justify-between text-[9px] font-bold tracking-widest">
-             <span className="text-muted-foreground">ANALYSIS ENGINE v4.2</span>
+             <span className="text-muted-foreground uppercase tracking-widest">System Core v5.0</span>
              <span className="text-emerald-500 flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-               GEO-LOCK ON
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+               MAP INTERACTIVE
              </span>
            </div>
         </div>
@@ -405,7 +412,7 @@ export default function SpatialHub() {
       
       <main 
         className="flex-1 relative bg-[#05070A] overflow-hidden"
-        onWheel={handleWheel}
+        onWheel={handleWheelZoom}
       >
         <VectorMap 
           lat={viewCenter.lat} 
@@ -415,15 +422,16 @@ export default function SpatialHub() {
           zones={zones}
         />
         
+        {/* Buscador Flotante Estilo Google Maps */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl px-4">
            <div className="relative group">
-              <div className="bg-[#0E1117]/90 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+              <div className="bg-[#0E1117]/90 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/40 transition-all hover:bg-[#161B22]/95">
                 <div className="w-12 h-12 rounded-[22px] bg-primary/10 flex items-center justify-center text-primary group-focus-within:bg-primary group-focus-within:text-white transition-all">
                   <Search className="w-5 h-5" />
                 </div>
                 <input 
                   type="text" 
-                  placeholder="Geolocalizar en el mapa..."
+                  placeholder="Geolocalizar en el territorio..."
                   className="bg-transparent border-none outline-none text-sm flex-1 text-white placeholder:text-muted-foreground/40 font-medium"
                   value={searchQuery}
                   onFocus={() => setShowSearchResults(true)}
@@ -433,7 +441,7 @@ export default function SpatialHub() {
                   }}
                 />
                 <div className="flex items-center gap-2 pr-2">
-                  <button className="w-10 h-10 hover:bg-white/5 rounded-2xl text-muted-foreground flex items-center justify-center transition-all" onClick={() => setViewCenter({ lat: 4.6097, lng: -74.0817 })}>
+                  <button className="w-10 h-10 hover:bg-white/5 rounded-2xl text-muted-foreground flex items-center justify-center transition-all" onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}>
                     <Crosshair className="w-4 h-4" />
                   </button>
                 </div>
@@ -461,30 +469,32 @@ export default function SpatialHub() {
            </div>
         </div>
         
+        {/* Controles de Zoom Manual */}
         <div className="absolute bottom-8 right-8 flex flex-col gap-4 z-30">
-          <div className="bg-[#0E1117]/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-1 flex flex-col shadow-2xl">
+          <div className="bg-[#0E1117]/90 backdrop-blur-xl border border-white/10 rounded-[28px] p-1 flex flex-col shadow-2xl overflow-hidden">
             <button 
-              onClick={() => setMapZoom(prev => Math.min(prev + 1, 18))}
-              className="w-14 h-14 hover:bg-white/5 rounded-t-[24px] text-lg font-bold transition-all text-white/60 hover:text-white"
+              onClick={() => setMapZoom(prev => Math.min(prev + 0.5, 18))}
+              className="w-14 h-14 hover:bg-white/10 text-lg font-bold transition-all text-white/60 hover:text-white"
             >+</button>
             <div className="h-[1px] bg-white/5 mx-2" />
             <button 
-              onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))}
-              className="w-14 h-14 hover:bg-white/5 rounded-b-[24px] text-lg font-bold transition-all text-white/60 hover:text-white"
+              onClick={() => setMapZoom(prev => Math.max(prev - 0.5, 5))}
+              className="w-14 h-14 hover:bg-white/10 text-lg font-bold transition-all text-white/60 hover:text-white"
             >−</button>
           </div>
         </div>
 
+        {/* Telemetría Dinámica */}
         <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
           <div className="bg-[#0E1117]/90 backdrop-blur-3xl border border-white/10 rounded-[32px] px-10 py-6 shadow-2xl border-l-8 border-l-primary flex gap-12 items-center">
             <div>
-              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">COORDENADAS</p>
-              <p className="text-xs font-mono font-bold text-white">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">COORDENADAS ACTUALES</p>
+              <p className="text-xs font-mono font-bold text-white tracking-widest">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
             </div>
             <div className="w-[1px] h-10 bg-white/10" />
             <div>
               <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2">RADIO DE ANÁLISIS</p>
-              <p className="text-xs font-mono font-bold text-white">{(20 - mapZoom) * 0.5} km</p>
+              <p className="text-xs font-mono font-bold text-white uppercase tracking-widest">{(20 - mapZoom) * 0.4} KM TÁCTICOS</p>
             </div>
           </div>
         </div>
@@ -527,7 +537,7 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
         </div>
         <div>
           <p className="text-sm font-bold text-white/90">{point.name}</p>
-          <p className="text-[10px] text-muted-foreground uppercase">{isSaved ? 'Zona Estratégica' : point.type}</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{isSaved ? 'Zona Estratégica' : point.type}</p>
         </div>
       </div>
       <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" />
@@ -546,7 +556,7 @@ function SearchItemMini({ point, onClick, isSaved = false }: any) {
       </div>
       <div className="flex-1">
         <p className="text-sm font-bold text-white/90 group-hover:text-primary transition-colors">{point.name}</p>
-        <p className="text-[10px] text-muted-foreground uppercase">{isSaved ? 'Perímetro Registrado' : point.type}</p>
+        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{isSaved ? 'Perímetro Registrado' : point.type}</p>
       </div>
       <div className="text-[9px] font-mono text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
         {point.lat.toFixed(3)}, {point.lng.toFixed(3)}
