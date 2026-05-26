@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Map as MapIcon, 
@@ -14,9 +15,13 @@ import {
   Command,
   ChevronRight,
   ChevronLeft,
-  Settings
+  Settings,
+  LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { toast } from '@/hooks/use-toast';
 
 const NAV_ITEMS = [
   { label: 'Visión General', icon: LayoutDashboard, href: '/dashboard' },
@@ -29,7 +34,20 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const auth = useAuth();
+  const { user } = useUser();
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: "Sesión cerrada", description: "Vuelve pronto." });
+      router.push('/login');
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div className={cn(
@@ -81,7 +99,7 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="p-4 mt-auto">
+      <div className="p-4 mt-auto space-y-2">
         {!isCollapsed && (
           <div className="bg-slate-200/40 p-4 rounded-2xl mb-4 border border-slate-200/60">
             <div className="flex items-center justify-between mb-2">
@@ -103,6 +121,25 @@ export function AppSidebar() {
           </div>
           {!isCollapsed && <span className="text-sm font-semibold text-slate-600">Configuración</span>}
         </div>
+
+        <button 
+          onClick={handleSignOut}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-500 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-red-100",
+            isCollapsed ? "justify-center" : ""
+          )}
+        >
+          <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center">
+            <LogOut className="w-4 h-4" />
+          </div>
+          {!isCollapsed && <span className="text-sm font-semibold">Cerrar Sesión</span>}
+        </button>
+
+        {!isCollapsed && user && (
+          <div className="pt-4 border-t border-slate-100 px-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{user.email}</p>
+          </div>
+        )}
       </div>
     </div>
   );

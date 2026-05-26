@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Zone": {
@@ -31,7 +32,7 @@
     }
   },
   "auth": {
-    "providers": ["google.com"]
+    "providers": ["google.com", "password"]
   },
   "firestore": {
     "/zones/{zoneId}": {
