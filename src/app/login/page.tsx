@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, Info } from 'lucide-react';
+import { Command, Mail, Lock, LogIn, UserPlus, AlertCircle, Info, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -26,6 +26,11 @@ export default function LoginPage() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [currentHostname, setCurrentHostname] = useState('');
+
+  useEffect(() => {
+    setCurrentHostname(window.location.hostname);
+  }, []);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +61,6 @@ export default function LoginPage() {
     setIsLoading(true);
     setAuthError(null);
     const provider = new GoogleAuthProvider();
-    // Forzar la selección de cuenta para depuración
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
@@ -64,15 +68,14 @@ export default function LoginPage() {
       toast({ title: "Google Auth Exitosa", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
-      console.error("Firebase Auth Error:", error);
       let errorMessage = "No se pudo completar la autenticación con Google.";
       
       if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = "Dominio no autorizado. Agrega " + window.location.hostname + " en Firebase Console > Auth > Settings.";
+        errorMessage = `Dominio no autorizado. Debes agregar "${currentHostname}" a la lista de dominios autorizados en Firebase Console > Authentication > Settings.`;
       } else if (error.code === 'auth/operation-not-allowed') {
         errorMessage = "El proveedor de Google no está habilitado en Firebase Console.";
-      } else if (error.message.includes('invalid-action')) {
-        errorMessage = "Acción inválida. Verifica que Google Auth esté configurado correctamente con un correo de soporte.";
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "La ventana de autenticación fue cerrada antes de completar el proceso.";
       }
       
       setAuthError(errorMessage);
@@ -105,11 +108,27 @@ export default function LoginPage() {
         <CardContent className="space-y-6">
           {authError && (
             <Alert variant="destructive" className="rounded-2xl bg-rose-50 border-rose-100 text-rose-700">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle className="text-xs font-bold uppercase tracking-wider">Estado de Seguridad</AlertTitle>
-              <AlertDescription className="text-[11px] leading-relaxed">
-                {authError}
-              </AlertDescription>
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <div className="flex flex-col gap-1">
+                <AlertTitle className="text-xs font-bold uppercase tracking-wider">Estado de Seguridad</AlertTitle>
+                <AlertDescription className="text-[11px] leading-relaxed">
+                  {authError}
+                </AlertDescription>
+                {authError.includes('unauthorized-domain') && (
+                  <div className="mt-2 p-2 bg-white/50 rounded-lg border border-rose-200">
+                    <p className="text-[10px] font-bold text-rose-800 mb-1">Copia este dominio:</p>
+                    <code className="text-[10px] bg-rose-100 px-2 py-1 rounded block truncate font-mono">{currentHostname}</code>
+                    <a 
+                      href="https://console.firebase.google.com/project/_/authentication/settings" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="mt-2 flex items-center gap-1 text-[9px] font-bold text-primary hover:underline"
+                    >
+                      Ir a Firebase Console <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </Alert>
           )}
 
@@ -189,7 +208,7 @@ export default function LoginPage() {
           <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100 flex items-start gap-3">
             <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <p className="text-[10px] text-blue-600 leading-relaxed">
-              <strong>Tip:</strong> Si ves un error de "Invalid Action", asegúrate de haber activado el proveedor de Google en tu consola de Firebase y de haber agregado un correo de soporte en la configuración del proyecto.
+              <strong>Tip:</strong> Si ves un error de "Dominio no autorizado", copia el nombre del servidor arriba y añádelo en la configuración de Authentication en tu consola de Firebase.
             </p>
           </div>
         </CardContent>
