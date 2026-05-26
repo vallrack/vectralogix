@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { VectorMap } from '@/components/map/VectorMap';
 import { 
@@ -81,14 +81,18 @@ export default function SpatialHub() {
   }, [zones, searchQuery]);
 
   const handleFocusPoint = (point: any) => {
-    const lat = point.lat || point.coordinates?.[0]?.lat;
-    const lng = point.lng || point.coordinates?.[0]?.lng;
+    const lat = point.lat || (point.coordinates && point.coordinates[0]?.lat);
+    const lng = point.lng || (point.coordinates && point.coordinates[0]?.lng);
     
-    if (lat && lng) {
+    if (lat !== undefined && lng !== undefined) {
       setViewCenter({ lat, lng });
-      setMapZoom(16);
+      setMapZoom(17); 
       setShowSearchResults(false);
       setSearchQuery(point.name || '');
+      toast({
+        title: "Enfocando Zona",
+        description: `Explorando el sector: ${point.name || 'Seleccionado'}`,
+      });
     }
   };
 
@@ -99,11 +103,17 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Calcular coordenadas simuladas basadas en el centro y zoom
-    // En un mapa real usaríamos la proyección de mercator, aquí simulamos el offset
-    const scale = Math.pow(2, 18 - mapZoom) * 0.00001;
-    const clickLat = viewCenter.lat - (y - rect.height / 2) * scale;
-    const clickLng = viewCenter.lng + (x - rect.width / 2) * scale;
+    // Cálculo de precisión basado en la escala de Mercator local
+    const latRad = viewCenter.lat * Math.PI / 180;
+    const worldSize = 256 * Math.pow(2, mapZoom);
+    const lngScale = worldSize / 360;
+    const latScale = lngScale / Math.cos(latRad);
+
+    const deltaX = x - rect.width / 2;
+    const deltaY = y - rect.height / 2;
+
+    const clickLng = viewCenter.lng + deltaX / lngScale;
+    const clickLat = viewCenter.lat - deltaY / latScale;
 
     const newPoint = {
       id: Date.now(),
@@ -115,7 +125,7 @@ export default function SpatialHub() {
     setPlannedPoints([...plannedPoints, newPoint]);
     toast({ 
       title: "Nodo Fijado", 
-      description: "Punto de ruta establecido en la posición seleccionada." 
+      description: "Punto de ruta establecido con precisión en el mapa." 
     });
   };
 
@@ -133,9 +143,13 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Guardada", description: "Perímetro registrado exitosamente." });
+        toast({ 
+          title: "Zona Registrada", 
+          description: "Perímetro guardado. Iniciando exploración de alta resolución." 
+        });
         setNewZoneName('');
-        setMapZoom(17); 
+        // Efecto de zoom automático táctico tras guardar
+        setMapZoom(18); 
       })
       .catch(async () => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -152,7 +166,7 @@ export default function SpatialHub() {
     if (delta > 0) {
       setMapZoom(prev => Math.max(prev - 0.5, 5));
     } else {
-      setMapZoom(prev => Math.min(prev + 0.5, 18));
+      setMapZoom(prev => Math.min(prev + 0.5, 20));
     }
   };
 
@@ -161,7 +175,7 @@ export default function SpatialHub() {
       <AppSidebar />
       
       <aside className="w-[400px] min-w-[400px] bg-card border-r border-slate-200/60 flex flex-col z-20 shadow-xl relative">
-        <div className="p-6 border-b border-slate-100 bg-slate-200/30">
+        <div className="p-6 border-b border-slate-100 bg-slate-50">
           <div className="flex items-center gap-4 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-primary/20">
               V
@@ -172,7 +186,7 @@ export default function SpatialHub() {
             </div>
           </div>
 
-          <div className="flex bg-slate-200/50 p-1 rounded-xl">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
             {ZONES_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -180,8 +194,8 @@ export default function SpatialHub() {
                 className={cn(
                   "flex-1 py-2 text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2",
                   activeTab === tab.id 
-                    ? "bg-card text-primary shadow-sm" 
-                    : "text-slate-500 hover:text-slate-900 hover:bg-card/50"
+                    ? "bg-white text-primary shadow-sm" 
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
                 )}
               >
                 <tab.icon className="w-3.5 h-3.5" />
@@ -201,7 +215,7 @@ export default function SpatialHub() {
                 exit={{ opacity: 0, y: -10 }}
                 className="space-y-6"
               >
-                <div className="glass-panel rounded-3xl p-6 space-y-6">
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
                     <MousePointer2 className="w-3 h-3" />
                     Editor de Cartografía
@@ -213,7 +227,7 @@ export default function SpatialHub() {
                       <input 
                         type="text" 
                         placeholder="Ej: Zona Norte Operativa"
-                        className="w-full bg-slate-200/40 border border-slate-200/60 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
                       />
@@ -221,7 +235,7 @@ export default function SpatialHub() {
                     
                     <div className="space-y-2">
                       <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Identificador Visual</label>
-                      <div className="flex gap-3 justify-between bg-slate-200/30 p-3 rounded-xl border border-slate-200/60">
+                      <div className="flex gap-3 justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
                         {COLORS.map((color) => (
                           <button
                             key={color.id}
@@ -267,7 +281,7 @@ export default function SpatialHub() {
                         <div 
                           key={zone.id} 
                           onClick={() => handleFocusPoint(zone)}
-                          className="flex items-center justify-between p-4 bg-card border border-slate-200/60 rounded-2xl hover:border-primary/30 hover:bg-slate-200/30 transition-all group cursor-pointer"
+                          className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer"
                         >
                           <div className="flex items-center gap-4">
                             <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
@@ -301,7 +315,7 @@ export default function SpatialHub() {
                 exit={{ opacity: 0, x: -10 }}
                 className="space-y-6"
               >
-                <div className="glass-panel p-6 rounded-3xl bg-primary/5 border-primary/10">
+                <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10">
                   <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
                     <Zap className="w-4 h-4" />
                     Modo Interactivo
@@ -320,14 +334,14 @@ export default function SpatialHub() {
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 px-2">PLANES DE RUTA ({plannedPoints.length})</h3>
                   {plannedPoints.length === 0 ? (
-                    <div className="py-20 border-2 border-dashed border-slate-200/60 rounded-3xl flex flex-col items-center text-center px-8">
+                    <div className="py-20 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center text-center px-8">
                        <Navigation className="w-10 h-10 text-slate-200 mb-4" />
                        <p className="text-[11px] text-slate-400">Interactúa con el mapa para iniciar el trazado.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {plannedPoints.map((point, idx) => (
-                        <div key={point.id} className="flex items-center gap-4 p-4 bg-card border border-slate-200/60 rounded-2xl group hover:border-primary/30 transition-all cursor-pointer" onClick={() => handleFocusPoint(point)}>
+                        <div key={point.id} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl group hover:border-primary/30 transition-all cursor-pointer" onClick={() => handleFocusPoint(point)}>
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                             {idx + 1}
                           </div>
@@ -358,7 +372,7 @@ export default function SpatialHub() {
                   <input 
                     type="text" 
                     placeholder="Explorar territorio..." 
-                    className="w-full bg-slate-200/40 border border-slate-200/60 rounded-xl py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-4 pl-12 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -396,12 +410,13 @@ export default function SpatialHub() {
           zoom={mapZoom} 
           plannedPoints={plannedPoints}
           zones={zones}
+          containerRef={mapContainerRef}
         />
         
         {/* Buscador Flotante Estilo Moderno */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4">
            <div className="relative">
-              <div className="bg-card border border-slate-200/60 rounded-2xl p-2 shadow-xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <div className="bg-white border border-slate-200 rounded-2xl p-2 shadow-xl flex items-center gap-4 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                   <Search className="w-5 h-5" />
                 </div>
@@ -417,7 +432,7 @@ export default function SpatialHub() {
                   }}
                 />
                 <button 
-                  className="w-10 h-10 hover:bg-slate-200/50 rounded-xl text-slate-400 flex items-center justify-center transition-all" 
+                  className="w-10 h-10 hover:bg-slate-100 rounded-xl text-slate-400 flex items-center justify-center transition-all" 
                   onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}
                 >
                   <Crosshair className="w-4 h-4" />
@@ -430,7 +445,7 @@ export default function SpatialHub() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-card border border-slate-200/60 rounded-2xl overflow-hidden shadow-2xl max-h-[350px] overflow-y-auto z-40 custom-scrollbar"
+                    className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl max-h-[350px] overflow-y-auto z-40 custom-scrollbar"
                   >
                     <div className="p-2">
                       {searchResults.mapPoints.map(point => (
@@ -447,26 +462,26 @@ export default function SpatialHub() {
         </div>
         
         <div className="absolute bottom-8 right-8 flex flex-col gap-3 z-30">
-          <div className="bg-card border border-slate-200/60 rounded-2xl p-1 flex flex-col shadow-xl">
+          <div className="bg-white border border-slate-200 rounded-2xl p-1 flex flex-col shadow-xl">
             <button 
-              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 0.5, 18)); }}
-              className="w-12 h-12 hover:bg-slate-200/50 text-xl font-bold transition-all text-slate-600 rounded-t-xl"
+              onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.min(prev + 0.5, 20)); }}
+              className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-t-xl"
             >+</button>
             <div className="h-[1px] bg-slate-100 mx-2" />
             <button 
               onClick={(e) => { e.stopPropagation(); setMapZoom(prev => Math.max(prev - 0.5, 5)); }}
-              className="w-12 h-12 hover:bg-slate-200/50 text-xl font-bold transition-all text-slate-600 rounded-b-xl"
+              className="w-12 h-12 hover:bg-slate-100 text-xl font-bold transition-all text-slate-600 rounded-b-xl"
             >−</button>
           </div>
         </div>
 
         <div className="absolute bottom-8 left-8 z-30 pointer-events-none">
-          <div className="bg-card border border-slate-200/60 rounded-2xl px-6 py-4 shadow-xl border-l-4 border-l-primary flex gap-8 items-center">
+          <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-xl border-l-4 border-l-primary flex gap-8 items-center">
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">COORDENADAS</p>
               <p className="text-xs font-mono font-bold text-slate-800">{viewCenter.lat.toFixed(6)}, {viewCenter.lng.toFixed(6)}</p>
             </div>
-            <div className="w-[1px] h-8 bg-slate-200/60" />
+            <div className="w-[1px] h-8 bg-slate-200" />
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">ZOOM ANALÍTICO</p>
               <p className="text-xs font-mono font-bold text-slate-800 uppercase">{mapZoom.toFixed(1)}x</p>
@@ -488,7 +503,7 @@ function ToolButton({ active, onClick, icon: Icon, label }: any) {
         "flex flex-col items-center justify-center py-4 rounded-2xl border transition-all gap-2",
         active 
           ? "bg-primary/5 border-primary text-primary shadow-sm" 
-          : "bg-card border-slate-200/60 text-slate-400 hover:bg-slate-200/50 hover:border-slate-300"
+          : "bg-white border-slate-200 text-slate-400 hover:bg-slate-50 hover:border-slate-300"
       )}
     >
       <Icon className="w-4 h-4" />
@@ -503,11 +518,11 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
       onClick={onClick}
       className={cn(
         "flex items-center justify-between p-4 border rounded-2xl transition-all cursor-pointer group",
-        isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-card border-slate-200/60 hover:border-slate-300"
+        isSaved ? "bg-primary/5 border-primary/20 hover:bg-primary/10" : "bg-white border-slate-200 hover:border-slate-300"
       )}
     >
       <div className="flex items-center gap-3">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", isSaved ? "bg-primary/10 border-primary/20 text-primary" : "bg-slate-200/40 border-slate-200/60 text-slate-400")}>
+        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", isSaved ? "bg-primary/10 border-primary/20 text-primary" : "bg-slate-50 border-slate-200 text-slate-400")}>
           {isSaved ? <MapIcon className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
         </div>
         <div>
@@ -524,9 +539,9 @@ function SearchItemMini({ point, onClick, isSaved = false }: any) {
   return (
     <div 
       onClick={onClick}
-      className="flex items-center gap-3 p-3 hover:bg-slate-200/50 transition-all cursor-pointer rounded-xl group"
+      className="flex items-center gap-3 p-3 hover:bg-slate-50 transition-all cursor-pointer rounded-xl group"
     >
-      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200/60", isSaved ? "text-primary bg-primary/5" : "text-slate-400 bg-slate-200/40")}>
+      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center border border-slate-200", isSaved ? "text-primary bg-primary/5" : "text-slate-400 bg-slate-50")}>
         {isSaved ? <MapIcon className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
       </div>
       <div className="flex-1">
