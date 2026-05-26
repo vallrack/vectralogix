@@ -127,7 +127,7 @@ export default function SpatialHub() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Proyección inversa simplificada para capturar clics
+    // Cálculo inverso aproximado de coordenadas basado en el centro actual y zoom
     const worldSize = 256 * Math.pow(2, mapZoom);
     const lngScale = worldSize / 360;
     const latRad = viewCenter.lat * Math.PI / 180;
@@ -147,8 +147,13 @@ export default function SpatialHub() {
   };
 
   const handleSaveZone = () => {
-    if (!firestore || !newZoneName || zonePoints.length === 0) {
-      toast({ variant: "destructive", title: "Faltan Datos", description: "Asigna un nombre y dibuja en el mapa." });
+    if (!firestore) return;
+    if (!newZoneName) {
+      toast({ variant: "destructive", title: "Nombre requerido", description: "Por favor asigna un nombre a la zona." });
+      return;
+    }
+    if (zonePoints.length === 0) {
+      toast({ variant: "destructive", title: "Mapa vacío", description: "Dibuja al menos un punto en el mapa táctico." });
       return;
     }
 
@@ -159,16 +164,16 @@ export default function SpatialHub() {
       color: activeHexColor,
       coordinates: zonePoints.map(p => ({ lat: p.lat, lng: p.lng })),
       zoom: mapZoom,
-      createdAt: serverTimestamp()
+      createdAt: new Date().toISOString()
     };
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
         toast({ 
           title: "Zona Registrada", 
-          description: `"${newZoneName}" se guardó correctamente.`,
+          description: `"${newZoneName}" se guardó correctamente en la base de datos.`,
           action: (
-            <ToastAction altText="Planear Ruta" onClick={() => { setActiveTab('rutas'); setNewRouteName(`Ruta ${newZoneName}`); }}>
+            <ToastAction altText="Planear Ruta" onClick={() => { setActiveTab('rutas'); setNewRouteName(`Ruta ${newZoneName}`); setIsDrawing(true); }}>
               Planear Ruta
             </ToastAction>
           )
@@ -188,8 +193,13 @@ export default function SpatialHub() {
   };
 
   const handleSaveRoute = () => {
-    if (!firestore || !newRouteName || plannedPoints.length < 2) {
-      toast({ variant: "destructive", title: "Error", description: "Asigna un nombre y marca al menos 2 puntos." });
+    if (!firestore) return;
+    if (!newRouteName) {
+      toast({ variant: "destructive", title: "Nombre requerido", description: "Asigna un nombre a la planeación." });
+      return;
+    }
+    if (plannedPoints.length < 2) {
+      toast({ variant: "destructive", title: "Ruta incompleta", description: "Marca al menos 2 nodos para trazar una ruta." });
       return;
     }
 
@@ -197,12 +207,12 @@ export default function SpatialHub() {
     const routeData = {
       name: newRouteName,
       stops: plannedPoints.map((p, i) => ({ lat: p.lat, lng: p.lng, order: i + 1 })),
-      createdAt: serverTimestamp()
+      createdAt: new Date().toISOString()
     };
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Ruta Guardada", description: "La planeación logística ha sido registrada." });
+        toast({ title: "Ruta Guardada", description: "La planeación logística ha sido registrada exitosamente." });
         setNewRouteName('');
         setPlannedPoints([]);
         setIsDrawing(false);
@@ -221,7 +231,7 @@ export default function SpatialHub() {
     if (!firestore) return;
     try {
       await deleteDoc(doc(firestore, coll, id));
-      toast({ title: "Registro Eliminado", description: "Se ha removido correctamente." });
+      toast({ title: "Registro Eliminado", description: "El elemento ha sido removido del sistema." });
     } catch (e) {
       console.error(e);
     }
