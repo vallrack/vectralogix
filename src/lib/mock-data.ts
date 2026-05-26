@@ -2,8 +2,8 @@
 export const MOCK_DRIVERS = [
   {
     id: 'dr-001',
-    name: 'Alex Rivera',
-    currentLocation: { latitude: 40.7128, longitude: -74.0060 },
+    name: 'Carlos Rodríguez',
+    currentLocation: { latitude: 4.6097, longitude: -74.0817 }, // Bogotá
     vehicleType: 'van',
     isAvailable: true,
     scheduledHoursRemaining: 6,
@@ -12,8 +12,8 @@ export const MOCK_DRIVERS = [
   },
   {
     id: 'dr-002',
-    name: 'Sarah Chen',
-    currentLocation: { latitude: 40.7306, longitude: -73.9352 },
+    name: 'Andrés Giraldo',
+    currentLocation: { latitude: 6.2442, longitude: -75.5812 }, // Medellín
     vehicleType: 'car',
     isAvailable: true,
     scheduledHoursRemaining: 4.5,
@@ -22,8 +22,8 @@ export const MOCK_DRIVERS = [
   },
   {
     id: 'dr-003',
-    name: 'Marcus Thorne',
-    currentLocation: { latitude: 40.7589, longitude: -73.9851 },
+    name: 'Luis Martínez',
+    currentLocation: { latitude: 3.4516, longitude: -76.5320 }, // Cali
     vehicleType: 'truck',
     isAvailable: false,
     scheduledHoursRemaining: 2,
@@ -32,8 +32,8 @@ export const MOCK_DRIVERS = [
   },
   {
     id: 'dr-004',
-    name: 'Elena Vance',
-    currentLocation: { latitude: 40.6782, longitude: -73.9442 },
+    name: 'Mariana Duque',
+    currentLocation: { latitude: 10.9639, longitude: -74.7964 }, // Barranquilla
     vehicleType: 'motorcycle',
     isAvailable: true,
     scheduledHoursRemaining: 7,
@@ -43,19 +43,19 @@ export const MOCK_DRIVERS = [
 ];
 
 export const MOCK_LOCATIONS = [
-  { id: 'loc-1', address: 'Madison Square Garden, NY', lat: 40.7505, lng: -73.9934 },
-  { id: 'loc-2', address: 'Empire State Building, NY', lat: 40.7484, lng: -73.9857 },
-  { id: 'loc-3', address: 'Central Park Zoo, NY', lat: 40.7678, lng: -73.9718 },
-  { id: 'loc-4', address: 'Brooklyn Bridge, NY', lat: 40.7061, lng: -73.9969 },
-  { id: 'loc-5', address: 'Times Square, NY', lat: 40.7580, lng: -73.9855 },
+  { id: 'loc-1', address: 'Plaza de Bolívar, Bogotá', lat: 4.5981, lng: -74.0760 },
+  { id: 'loc-2', address: 'Parque Lleras, Medellín', lat: 6.2091, lng: -75.5677 },
+  { id: 'loc-3', address: 'Torre de Cali, Cali', lat: 3.4578, lng: -76.5298 },
+  { id: 'loc-4', address: 'Castillo San Felipe, Cartagena', lat: 10.4226, lng: -75.5403 },
+  { id: 'loc-5', address: 'Ventana al Mundo, Barranquilla', lat: 11.0201, lng: -74.8300 },
 ];
 
 export const MOCK_STATS = [
-  { name: 'Mon', active: 45, completed: 340 },
-  { name: 'Tue', active: 52, completed: 310 },
-  { name: 'Wed', active: 48, completed: 390 },
-  { name: 'Thu', active: 61, completed: 420 },
-  { name: 'Fri', active: 55, completed: 380 },
-  { name: 'Sat', active: 40, completed: 250 },
-  { name: 'Sun', active: 35, completed: 180 },
+  { name: 'Lun', active: 45, completed: 340 },
+  { name: 'Mar', active: 52, completed: 310 },
+  { name: 'Mie', active: 48, completed: 390 },
+  { name: 'Jue', active: 61, completed: 420 },
+  { name: 'Vie', active: 55, completed: 380 },
+  { name: 'Sab', active: 40, completed: 250 },
+  { name: 'Dom', active: 35, completed: 180 },
 ];

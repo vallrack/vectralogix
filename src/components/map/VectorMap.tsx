@@ -1,60 +1,57 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Navigation, Car, LocateFixed, Layers, ZoomIn, ZoomOut, MousePointer2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { MapPin, Navigation, LocateFixed, ZoomIn, ZoomOut } from 'lucide-react';
 import { MOCK_LOCATIONS, MOCK_DRIVERS } from '@/lib/mock-data';
 
 interface VectorMapProps {
   showTraffic?: boolean;
-  selectedZone?: string;
 }
 
-export function VectorMap({ showTraffic = true, selectedZone }: VectorMapProps) {
-  const [zoom, setZoom] = useState(14);
-  const [center, setCenter] = useState({ x: 50, y: 50 });
+export function VectorMap({ showTraffic = true }: VectorMapProps) {
+  const [zoom, setZoom] = useState(12);
+  const [center] = useState({ x: 50, y: 50 });
   
-  // Simulate map movement or interactive elements
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#0A0C10] select-none cursor-crosshair">
-      {/* Simulated Grid Background */}
+      {/* Simulated Grid Background with Colombia "Feeling" */}
       <div 
-        className="absolute inset-0 opacity-20"
+        className="absolute inset-0 opacity-10"
         style={{
           backgroundImage: `linear-gradient(#387AF5 1px, transparent 1px), linear-gradient(90deg, #387AF5 1px, transparent 1px)`,
-          backgroundSize: `${zoom * 4}px ${zoom * 4}px`,
+          backgroundSize: `${zoom * 5}px ${zoom * 5}px`,
           backgroundPosition: `${center.x}% ${center.y}%`
         }}
       />
 
       {/* Map Content Layer */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="relative w-[200%] h-[200%] rotate-x-12 perspective-1000">
+        <div className="relative w-[150%] h-[150%] perspective-1000">
           
-          {/* Simulated Routes */}
-          <svg className="absolute inset-0 w-full h-full opacity-40">
+          {/* Simulated Routes connecting Colombian Hubs */}
+          <svg className="absolute inset-0 w-full h-full opacity-30">
             <path 
-              d="M 500 400 L 700 600 L 1000 550 L 1200 800" 
+              d="M 600 500 L 800 300 L 900 200 L 1100 450" 
               fill="none" 
               stroke="#387AF5" 
-              strokeWidth="3" 
-              strokeDasharray="8 4"
-              className="animate-[dash_20s_linear_infinite]"
+              strokeWidth="2" 
+              strokeDasharray="10 5"
+              className="animate-[dash_25s_linear_infinite]"
             />
             {showTraffic && (
               <path 
-                d="M 400 300 L 600 500 L 900 450" 
+                d="M 500 600 L 700 400 L 850 550" 
                 fill="none" 
                 stroke="#F59E0B" 
-                strokeWidth="4" 
-                className="opacity-60"
+                strokeWidth="3" 
+                className="opacity-40"
               />
             )}
           </svg>
 
-          {/* Delivery Locations */}
+          {/* Delivery Locations in Colombia */}
           {MOCK_LOCATIONS.map((loc, i) => (
             <motion.div
               key={loc.id}
@@ -62,43 +59,43 @@ export function VectorMap({ showTraffic = true, selectedZone }: VectorMapProps) 
               animate={{ scale: 1 }}
               transition={{ delay: i * 0.1 }}
               className="absolute pointer-events-auto"
-              style={{ left: `${30 + i * 12}%`, top: `${20 + (i % 3) * 15}%` }}
+              style={{ left: `${35 + (i * 10)}%`, top: `${25 + ((i % 2) * 20)}%` }}
             >
               <div className="group relative">
                 <div className="absolute -inset-2 bg-primary/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
                 <MapPin className="w-8 h-8 text-primary drop-shadow-lg" />
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 glass-panel rounded text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 glass-panel rounded-xl text-[10px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50">
                   {loc.address}
                 </div>
               </div>
             </motion.div>
           ))}
 
-          {/* Drivers (Live) */}
+          {/* Drivers in Colombia (Live Simulation) */}
           {MOCK_DRIVERS.map((driver, i) => (
             <motion.div
               key={driver.id}
               animate={{ 
-                x: [0, 20, -10, 0],
-                y: [0, -15, 10, 0]
+                x: [0, 30, -15, 0],
+                y: [0, -20, 10, 0]
               }}
               transition={{ 
-                duration: 10 + i * 2, 
+                duration: 12 + i * 3, 
                 repeat: Infinity,
-                ease: "linear" 
+                ease: "easeInOut" 
               }}
               className="absolute pointer-events-auto"
-              style={{ left: `${45 + i * 10}%`, top: `${45 + i * 8}%` }}
+              style={{ left: `${40 + i * 8}%`, top: `${50 + i * 5}%` }}
             >
               <div className="relative flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full border-2 border-accent bg-background overflow-hidden animate-pulse-subtle">
+                <div className="w-9 h-9 rounded-2xl border-2 border-accent bg-background overflow-hidden shadow-lg shadow-accent/20">
                   <img src={driver.avatar} alt={driver.name} className="w-full h-full object-cover" />
                 </div>
-                <div className="glass-panel px-2 py-1 rounded text-[10px] hidden group-hover:block absolute left-10">
-                  <div className="font-bold">{driver.name}</div>
-                  <div className="text-accent">{driver.vehicleType.toUpperCase()}</div>
+                <div className="glass-panel px-3 py-2 rounded-xl text-[10px] hidden group-hover:block absolute left-12 z-50 border-accent/30">
+                  <div className="font-bold text-foreground">{driver.name}</div>
+                  <div className="text-accent font-medium uppercase tracking-tighter">{driver.vehicleType}</div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-background rounded-full" />
+                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-background rounded-full neon-glow" />
               </div>
             </motion.div>
           ))}
@@ -107,37 +104,37 @@ export function VectorMap({ showTraffic = true, selectedZone }: VectorMapProps) 
 
       {/* Map Controls */}
       <div className="absolute right-6 bottom-6 flex flex-col gap-2">
-        <div className="glass-panel p-2 flex flex-col gap-2 rounded-xl">
-          <button onClick={() => setZoom(prev => Math.min(prev + 1, 20))} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+        <div className="glass-panel p-2 flex flex-col gap-2 rounded-2xl">
+          <button onClick={() => setZoom(prev => Math.min(prev + 1, 20))} className="p-3 hover:bg-white/10 rounded-xl transition-colors">
             <ZoomIn className="w-5 h-5 text-foreground/80" />
           </button>
           <div className="h-px bg-white/10 mx-2" />
-          <button onClick={() => setZoom(prev => Math.max(prev - 1, 5))} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+          <button onClick={() => setZoom(prev => Math.max(prev - 1, 5))} className="p-3 hover:bg-white/10 rounded-xl transition-colors">
             <ZoomOut className="w-5 h-5 text-foreground/80" />
           </button>
         </div>
-        <button className="glass-panel p-3 rounded-full hover:bg-primary/20 transition-all active:scale-95">
+        <button className="glass-panel p-4 rounded-full bg-primary/10 hover:bg-primary/20 transition-all active:scale-95 border-primary/30">
           <LocateFixed className="w-6 h-6 text-primary" />
         </button>
       </div>
 
-      {/* Top Floating Stats */}
+      {/* Top Floating Stats for Colombia */}
       <div className="absolute top-6 left-6 right-6 flex justify-between pointer-events-none">
         <div className="flex gap-4 pointer-events-auto">
-          <div className="glass-panel px-4 py-2 rounded-full flex items-center gap-2 animate-in slide-in-from-top duration-500">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-medium tracking-wider">NETWORK STATUS: OPTIMAL</span>
+          <div className="glass-panel px-5 py-2.5 rounded-full flex items-center gap-3 animate-in slide-in-from-top duration-500">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[10px] font-bold tracking-widest uppercase">CO-NETWORK: OPERACIONAL</span>
           </div>
-          <div className="glass-panel px-4 py-2 rounded-full flex items-center gap-3 animate-in slide-in-from-top duration-700">
+          <div className="glass-panel px-5 py-2.5 rounded-full flex items-center gap-3 animate-in slide-in-from-top duration-700">
             <Navigation className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium">40.7128° N, 74.0060° W</span>
+            <span className="text-[10px] font-bold tracking-widest uppercase">BOGOTÁ, COLOMBIA (4.71° N, 74.07° W)</span>
           </div>
         </div>
         
-        <div className="pointer-events-auto glass-panel p-1 rounded-full flex gap-1">
-          <button className="px-4 py-1 rounded-full bg-primary text-xs font-bold shadow-lg shadow-primary/20">HYBRID</button>
-          <button className="px-4 py-1 rounded-full text-xs font-medium hover:bg-white/5">TRAFFIC</button>
-          <button className="px-4 py-1 rounded-full text-xs font-medium hover:bg-white/5">TERRAIN</button>
+        <div className="pointer-events-auto glass-panel p-1.5 rounded-full flex gap-1">
+          <button className="px-5 py-1.5 rounded-full bg-primary text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">VECTOR</button>
+          <button className="px-5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">TRÁFICO</button>
+          <button className="px-5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/5">SATÉLITE</button>
         </div>
       </div>
 
