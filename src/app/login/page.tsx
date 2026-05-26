@@ -56,7 +56,6 @@ export default function LoginPage() {
       }
       router.push('/dashboard');
     } catch (error: any) {
-      // No logueamos el error a console.error para evitar el overlay de Next.js
       let errorMessage = error.message;
       if (error.code === 'auth/unauthorized-domain') {
         errorMessage = `unauthorized-domain:${currentHostname}`;
@@ -83,7 +82,6 @@ export default function LoginPage() {
       toast({ title: "Google Auth Exitosa", description: "Sesión iniciada correctamente." });
       router.push('/dashboard');
     } catch (error: any) {
-      // No logueamos el error a console.error para evitar el overlay de Next.js
       let errorMessage = "No se pudo completar la autenticación con Google.";
       
       if (error.code === 'auth/unauthorized-domain') {
