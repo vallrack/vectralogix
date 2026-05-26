@@ -2,164 +2,179 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AppSidebar } from '@/components/layout/AppSidebar';
 import { VectorMap } from '@/components/map/VectorMap';
 import { 
-  Pencil, 
-  Circle, 
   Square, 
-  Trash2, 
-  Save, 
-  MousePointer2, 
-  Layers, 
-  Activity, 
+  Circle, 
   Hexagon,
-  ChevronLeft,
   Search,
-  Zap,
-  Navigation2
+  RefreshCw,
+  LogOut,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+const ZONES_TABS = [
+  { id: 'zonas', label: 'Zonas' },
+  { id: 'rutas', label: 'Rutas' },
+  { id: 'buscar', label: 'Buscar' },
+  { id: 'reportes', label: 'Reportes' },
+];
+
+const COLORS = [
+  { id: 'blue', class: 'bg-blue-500' },
+  { id: 'green', class: 'bg-emerald-500' },
+  { id: 'red', class: 'bg-rose-500' },
+  { id: 'orange', class: 'bg-amber-500' },
+  { id: 'purple', class: 'bg-violet-500' },
+  { id: 'pink', class: 'bg-pink-500' },
+];
 
 export default function SpatialHub() {
-  const [panelOpen, setPanelOpen] = useState(true);
-  const [activeTool, setActiveTool] = useState('select');
-
-  const tools = [
-    { id: 'select', icon: MousePointer2, label: 'Select' },
-    { id: 'polygon', icon: Hexagon, label: 'Polygon' },
-    { id: 'radius', icon: Circle, label: 'Radius' },
-    { id: 'path', icon: Pencil, label: 'Path' },
-  ];
+  const [activeTab, setActiveTab] = useState('zonas');
+  const [selectedColor, setSelectedColor] = useState('blue');
+  const [activeTool, setActiveTool] = useState('polygon');
 
   return (
-    <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      <AppSidebar />
-      
-      <main className="flex-1 relative">
-        <VectorMap />
-
-        {/* Floating Tool Panel */}
-        <div className="absolute left-6 top-1/2 -translate-y-1/2 flex flex-col gap-4">
-          <div className="glass-panel p-2 rounded-2xl flex flex-col gap-1 shadow-2xl">
-            {tools.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => setActiveTool(tool.id)}
-                className={cn(
-                  "p-3 rounded-xl transition-all relative group",
-                  activeTool === tool.id ? "bg-primary text-white" : "text-muted-foreground hover:bg-white/10 hover:text-foreground"
-                )}
-              >
-                <tool.icon className="w-6 h-6" />
-                <div className="absolute left-16 px-2 py-1 glass-panel rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0 transition-all pointer-events-none">
-                  {tool.label.toUpperCase()}
-                </div>
-              </button>
-            ))}
-            <div className="h-px bg-white/10 my-2 mx-2" />
-            <button className="p-3 rounded-xl text-red-500 hover:bg-red-500/10 transition-all">
-              <Trash2 className="w-6 h-6" />
-            </button>
+    <div className="flex h-screen bg-[#0A0C10] text-foreground overflow-hidden">
+      {/* Sidebar de Mapa Estilo Referencia */}
+      <aside className="w-[380px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20">
+        {/* User Profile */}
+        <div className="p-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-sm">
+              JO
+            </div>
+            <div>
+              <p className="text-sm font-bold leading-tight">José Daniel Avendaño Morales</p>
+              <p className="text-[10px] text-muted-foreground">@Vattrack</p>
+            </div>
           </div>
+          <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+            <LogOut className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
 
-        {/* Right Info Panel */}
-        <AnimatePresence>
-          {panelOpen && (
-            <motion.div 
-              initial={{ x: 400 }}
-              animate={{ x: 0 }}
-              exit={{ x: 400 }}
-              className="absolute right-0 top-0 bottom-0 w-[400px] glass-panel border-l border-white/5 m-6 rounded-3xl overflow-hidden flex flex-col shadow-2xl z-20"
+        {/* Tabs */}
+        <div className="flex px-2 border-b border-white/5">
+          {ZONES_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex-1 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2",
+                activeTab === tab.id 
+                  ? "text-blue-500 border-blue-500" 
+                  : "text-muted-foreground border-transparent hover:text-foreground"
+              )}
             >
-              <div className="p-6 border-b border-white/5 flex items-center justify-between bg-primary/5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-headline font-bold">Zone Profiler</h3>
-                </div>
-                <button onClick={() => setPanelOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Panel Contenido */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {/* Crear Nueva Zona Section */}
+          <div className="space-y-6">
+            <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 space-y-6">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-widest mb-2">CREAR NUEVA ZONA</h3>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Elige color y herramienta, dibuja en el mapa y completa nombre y descripción en el modal.
+                </p>
               </div>
 
-              <div className="p-6 space-y-8 flex-1 overflow-y-auto">
-                {/* Search / Location */}
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Search</p>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input 
-                      type="text" 
-                      placeholder="Find sector, hub, or unit..." 
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50 transition-all"
+              {/* Color Picker */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Color de la Zona</p>
+                <div className="flex gap-3">
+                  {COLORS.map((color) => (
+                    <button
+                      key={color.id}
+                      onClick={() => setSelectedColor(color.id)}
+                      className={cn(
+                        "w-6 h-6 rounded-full transition-all ring-offset-2 ring-offset-[#0E1117]",
+                        color.class,
+                        selectedColor === color.id ? "ring-2 ring-white scale-110" : "opacity-80 hover:opacity-100"
+                      )}
                     />
-                  </div>
-                </div>
-
-                {/* Zone Metrics */}
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sector Analysis</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Density</p>
-                      <p className="text-xl font-headline font-bold">12.4 <span className="text-[10px] font-medium text-muted-foreground">u/km²</span></p>
-                    </div>
-                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Efficiency</p>
-                      <p className="text-xl font-headline font-bold text-green-500">92%</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Legend / Layers */}
-                <div className="space-y-4">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Layers</p>
-                  <div className="space-y-2">
-                    {[
-                      { label: 'Real-time Traffic', color: 'bg-orange-500' },
-                      { label: 'Fleet Distribution', color: 'bg-primary' },
-                      { label: 'High Demand Zones', color: 'bg-red-500' },
-                      { label: 'Weather Overlay', color: 'bg-accent' },
-                    ].map((layer, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 cursor-pointer transition-colors group">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-2 h-2 rounded-full", layer.color)} />
-                          <span className="text-sm font-medium">{layer.label}</span>
-                        </div>
-                        <div className="w-8 h-4 bg-white/10 rounded-full relative overflow-hidden group-hover:bg-primary/20 transition-all">
-                          <div className="absolute left-1 top-1 w-2 h-2 bg-white rounded-full group-hover:translate-x-4 transition-transform" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="p-6 border-t border-white/5 flex gap-3">
-                <button className="flex-1 py-4 bg-primary text-white text-xs font-bold rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:translate-y-[-2px] transition-all">
-                  <Save className="w-4 h-4" />
-                  SAVE REGION
-                </button>
-                <button className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all">
-                  <Navigation2 className="w-5 h-5 text-muted-foreground" />
-                </button>
+              {/* Drawing Tools */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase">Seleccionar Herramienta de Dibujo</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => setActiveTool('polygon')}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-3 rounded-xl border transition-all text-[9px] font-bold gap-2",
+                      activeTool === 'polygon' ? "bg-blue-600/20 border-blue-600 text-blue-500" : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                    )}
+                  >
+                    <Hexagon className="w-4 h-4" />
+                    POLÍGONO
+                  </button>
+                  <button 
+                    onClick={() => setActiveTool('rect')}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-3 rounded-xl border transition-all text-[9px] font-bold gap-2",
+                      activeTool === 'rect' ? "bg-blue-600/20 border-blue-600 text-blue-500" : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                    )}
+                  >
+                    <Square className="w-4 h-4" />
+                    RECTÁNGULO
+                  </button>
+                  <button 
+                    onClick={() => setActiveTool('circle')}
+                    className={cn(
+                      "flex flex-col items-center justify-center py-3 rounded-xl border transition-all text-[9px] font-bold gap-2",
+                      activeTool === 'circle' ? "bg-blue-600/20 border-blue-600 text-blue-500" : "bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10"
+                    )}
+                  >
+                    <Circle className="w-4 h-4" />
+                    CÍRCULO
+                  </button>
+                </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
 
-        {!panelOpen && (
-          <button 
-            onClick={() => setPanelOpen(true)}
-            className="absolute right-6 top-6 glass-panel p-4 rounded-2xl hover:bg-primary/20 transition-all shadow-2xl z-30"
-          >
-            <Layers className="w-6 h-6 text-primary" />
-          </button>
-        )}
+          {/* Mis Zonas List */}
+          <div className="space-y-6 pt-4 border-t border-white/5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-widest">MIS ZONAS (0)</h3>
+              <button className="p-1 hover:bg-white/5 rounded transition-colors">
+                <RefreshCw className="w-3 h-3 text-muted-foreground" />
+              </button>
+            </div>
+            
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+              <p className="text-xs text-muted-foreground italic">No hay zonas guardadas.</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Footer info/brand */}
+        <div className="p-4 flex justify-between items-center border-t border-white/5">
+           <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center text-[10px] font-bold">N</div>
+        </div>
+      </aside>
+      
+      {/* Map Area */}
+      <main className="flex-1 relative">
+        <VectorMap />
+        
+        {/* Map Controls (Top Right) */}
+        <div className="absolute top-6 right-6 flex flex-col gap-2">
+          <div className="bg-[#0E1117] border border-white/10 rounded-lg overflow-hidden flex flex-col shadow-2xl">
+            <button className="p-3 hover:bg-white/5 border-b border-white/10 text-sm font-bold">+</button>
+            <button className="p-3 hover:bg-white/5 text-sm font-bold">−</button>
+          </div>
+        </div>
       </main>
     </div>
   );

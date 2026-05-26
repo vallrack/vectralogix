@@ -16,9 +16,12 @@ import {
   Area 
 } from 'recharts';
 import { MOCK_STATS, MOCK_DRIVERS } from '@/lib/mock-data';
-import { Bell, Search, Filter, MoreHorizontal, ArrowUpRight } from 'lucide-react';
+import { Bell, Search, MoreHorizontal, ArrowUpRight } from 'lucide-react';
 
 export default function Dashboard() {
+  // Fix: Create a shallow copy before sorting to avoid mutating the shared MOCK_DRIVERS array
+  const sortedDrivers = [...MOCK_DRIVERS].sort((a, b) => b.performance - a.performance);
+
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <AppSidebar />
@@ -115,7 +118,7 @@ export default function Dashboard() {
               </div>
               
               <div className="space-y-6">
-                {MOCK_DRIVERS.sort((a,b) => b.performance - a.performance).map((driver, i) => (
+                {sortedDrivers.map((driver, i) => (
                   <div key={driver.id} className="flex items-center justify-between group cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className="relative">
