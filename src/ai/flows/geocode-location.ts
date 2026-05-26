@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for geocoding locations and landmarks in Colombia.
- * Handles AI-based coordinate lookup with error resilience for API configuration issues.
+ * Handles AI-based coordinate lookup with multi-model redundancy for high availability.
  */
 
 import {ai} from '@/ai/genkit';
@@ -42,7 +42,7 @@ const geocodePrompt = ai.definePrompt({
   Instructions:
   1. Identify the most likely location in Colombia.
   2. Provide accurate Latitude and Longitude.
-  3. If it's a neighborhood or specific landmark, suggest a zoom level of 16-17.
+  3. If it's a neighborhood or specific landmark (like 'La Gabriela' in Bello), suggest a zoom level of 16-17.
   4. If it's a city or large area, suggest 12-13.
   5. Return a clean display name.`,
 });
@@ -54,11 +54,26 @@ const geocodeLocationFlow = ai.defineFlow(
     outputSchema: GeocodeOutputSchema,
   },
   async (input) => {
-    const { output } = await geocodePrompt(input);
-    if (!output) {
-      throw new Error('La IA no pudo procesar la ubicación geográfica.');
+    try {
+      // Intento Primario: Gemini 2.5 Flash
+      const { output } = await geocodePrompt(input, {
+        model: 'googleai/gemini-2.5-flash',
+      });
+      if (!output) throw new Error('Empty output from primary model');
+      return output;
+    } catch (error) {
+      console.warn('Primary geocode model failed, scaling to redundant model...', error);
+      try {
+        // Intento de Respaldo: Gemini 1.5 Pro
+        const { output } = await geocodePrompt(input, {
+          model: 'googleai/gemini-1.5-pro',
+        });
+        if (!output) throw new Error('Empty output from redundant model');
+        return output;
+      } catch (fallbackError) {
+        throw new Error('La inteligencia geográfica no está disponible en este momento por fallos en los modelos de lenguaje de Google.');
+      }
     }
-    return output;
   }
 );
 
@@ -67,19 +82,19 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
     const result = await geocodeLocationFlow(input);
     return { success: true, data: result };
   } catch (error: any) {
-    console.error('Error in geocodeLocationFlow:', error);
+    console.error('All geocode models failed:', error);
     
-    // Capturamos específicamente el error de API Key filtrada o inválida
+    // Capturamos específicamente fallos de API Key o seguridad
     if (error.message?.includes('leaked') || error.message?.includes('API key') || error.status === 403) {
       return { 
         success: false, 
-        error: 'El servicio de IA (Gemini) está temporalmente fuera de servicio por una incidencia de seguridad con la API Key. Por favor, contacte con soporte.' 
+        error: 'Incidencia de seguridad detectada en la API Key de Google. El servicio está en modo degradado. Contacte a soporte técnico.' 
       };
     }
     
     return { 
       success: false, 
-      error: 'No se pudo localizar el punto exacto. Prueba con una dirección más completa o busca en otra zona.' 
+      error: error.message || 'No se pudo localizar el punto exacto. Prueba con una dirección más completa.' 
     };
   }
 }
