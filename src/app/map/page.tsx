@@ -20,7 +20,8 @@ import {
   Pencil,
   Eraser,
   Loader2,
-  Hand
+  Hand,
+  Map as MapIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +31,7 @@ import { toast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { ToastAction } from '@/components/ui/toast';
+import { geocodeLocation } from '@/ai/flows/geocode-location';
 
 const ZONES_TABS = [
   { id: 'zonas', label: 'Zonas', icon: Layers },
@@ -44,20 +46,12 @@ const COLORS = [
   { id: 'purple', class: 'bg-violet-500', hex: '#8b5cf6' },
 ];
 
-const COLOMBIA_DATABASE = [
-  { id: 'c1', name: 'Bello', lat: 6.3373, lng: -75.5579 },
-  { id: 'c2', name: 'Medellín', lat: 6.2442, lng: -75.5812 },
-  { id: 'c3', name: 'Bogotá', lat: 4.6097, lng: -74.0817 },
-  { id: 'c4', name: 'Cali', lat: 3.4516, lng: -76.5320 },
-  { id: 'c5', name: 'Barranquilla', lat: 10.9639, lng: -74.7964 },
-  { id: 'c6', name: 'Cartagena', lat: 10.4236, lng: -75.5251 },
-];
-
 export default function SpatialHub() {
   const [activeTab, setActiveTab] = useState('zonas');
   const [selectedColor, setSelectedColor] = useState('blue');
   const [activeTool, setActiveTool] = useState('polygon'); // polygon, rect, circle, navigate
   const [isSaving, setIsSaving] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
   const [newRouteName, setNewRouteName] = useState('');
   const [mapZoom, setMapZoom] = useState(14);
@@ -114,21 +108,35 @@ export default function SpatialHub() {
     panStartRef.current = null;
   };
 
-  const handleGlobalSearch = (term: string) => {
+  const handleGlobalSearch = async (term: string) => {
     const queryTerm = term.toLowerCase().trim();
     if (!queryTerm) return;
 
-    const matchedCity = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(queryTerm));
-    if (matchedCity) {
-      setViewCenter({ lat: matchedCity.lat, lng: matchedCity.lng });
-      setMapZoom(16);
+    setIsSearching(true);
+    try {
+      const result = await geocodeLocation({ query: queryTerm });
+      setViewCenter({ lat: result.lat, lng: result.lng });
+      setMapZoom(result.zoom);
+      
       if (activeTab === 'zonas') {
-        setNewZoneName(matchedCity.name);
+        setNewZoneName(result.displayName);
       } else {
-        setNewRouteName(`Ruta ${matchedCity.name}`);
+        setNewRouteName(`Ruta ${result.displayName}`);
       }
-      setIsDrawing(true);
-      toast({ title: "Ubicación Localizada", description: `Centro táctico posicionado en ${matchedCity.name}.` });
+      
+      toast({ 
+        title: "Ubicación Localizada", 
+        description: `Centro táctico posicionado en ${result.displayName}.` 
+      });
+    } catch (error) {
+      console.error(error);
+      toast({ 
+        variant: "destructive", 
+        title: "Error de Localización", 
+        description: "No se pudo encontrar la ubicación solicitada." 
+      });
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -175,17 +183,12 @@ export default function SpatialHub() {
       type: activeTool,
       color: activeHexColor,
       coordinates: zonePoints.map(p => ({ lat: p.lat, lng: p.lng })),
-      zoom: 16,
+      zoom: mapZoom,
       createdAt: new Date().toISOString()
     };
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        if (zonePoints.length > 0) {
-          setViewCenter({ lat: zonePoints[0].lat, lng: zonePoints[0].lng });
-          setMapZoom(16);
-        }
-
         toast({ 
           title: "Zona Registrada", 
           description: `"${newZoneName}" guardada. Mapa enfocado para inspección detallada.`,
@@ -335,11 +338,11 @@ export default function SpatialHub() {
                 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Buscar Ciudad / Nombre</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Buscar Dirección / Lugar</label>
                     <div className="relative">
                       <input 
                         type="text" 
-                        placeholder="Ej: Bello"
+                        placeholder="Ej: La Gabriela, Bello"
                         className="w-full bg-white border border-slate-200 rounded-xl py-4 px-4 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm font-bold"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
@@ -347,7 +350,13 @@ export default function SpatialHub() {
                           if (e.key === 'Enter') handleGlobalSearch(newZoneName);
                         }}
                       />
-                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 cursor-pointer hover:text-primary" onClick={() => handleGlobalSearch(newZoneName)} />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                        {isSearching ? (
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        ) : (
+                          <Search className="w-4 h-4 text-slate-300 cursor-pointer hover:text-primary" onClick={() => handleGlobalSearch(newZoneName)} />
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -458,7 +467,13 @@ export default function SpatialHub() {
                         onChange={(e) => setNewRouteName(e.target.value)} 
                         onKeyDown={(e) => { if (e.key === 'Enter') handleGlobalSearch(newRouteName); }}
                       />
-                      <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                        {isSearching ? (
+                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        ) : (
+                          <Search className="w-4 h-4 text-slate-300" />
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
