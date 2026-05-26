@@ -254,7 +254,7 @@ export default function SpatialHub() {
                     <div className="grid grid-cols-3 gap-3">
                       <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); }} icon={Hexagon} label="POLÍGONO" />
                       <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); }} icon={Square} label="ÁREA" />
-                      <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); }} icon={RADIO} label="RADIO" />
+                      <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); }} icon={Circle} label="RADIO" />
                     </div>
 
                     <button 
