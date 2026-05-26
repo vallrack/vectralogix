@@ -1,7 +1,8 @@
+
 'use server';
 /**
- * @fileOverview Un flujo de Genkit para geocodificar ubicaciones y direcciones en Colombia.
- * Utiliza redundancia de modelos (Flash 2.5, Flash 1.5, Pro 1.5) para alta disponibilidad.
+ * @fileOverview Motor de geocodificación resiliente con el 'Ejército de IA'.
+ * Implementa una cascada de modelos (Flash -> Pro) para asegurar la localización.
  */
 
 import {ai} from '@/ai/genkit';
@@ -39,13 +40,14 @@ const geocodePrompt = ai.definePrompt({
   Consulta: {{{query}}}
   
   Instrucciones:
-  1. Identifica el lugar más probable en Colombia.
-  2. Maneja direcciones (Calles, Carreras, Avenidas) y barrios (ej: 'La Gabriela' en Bello).
+  1. Identifica el lugar más probable en Colombia (especialmente en el área de Bello, Antioquia).
+  2. Maneja direcciones exactas y barrios.
   3. Provee Latitud y Longitud precisas.
   4. Sugiere zoom: 19 para dirección exacta, 16 para barrios, 12 para ciudades.`,
 });
 
 export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeResponse> {
+  // Ejército de IA: Intentamos con múltiples modelos para garantizar la respuesta
   const models = [
     'googleai/gemini-2.5-flash',
     'googleai/gemini-1.5-flash',
@@ -62,17 +64,18 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
       if (output) return { success: true, data: output };
     } catch (error: any) {
       lastError = error;
-      console.warn(`Modelo ${model} falló, intentando siguiente...`, error.message);
+      console.warn(`Ejército de IA: Modelo ${model} no disponible, reintentando con reserva...`);
       
-      if (error.message?.includes('leaked') || error.status === 403) {
-        continue; // Intentar con el siguiente modelo incluso si la API Key está reportada (redundancia)
+      // Si es un error de API Key (leaked/403), continuamos al siguiente modelo
+      if (error.message?.includes('leaked') || error.status === 403 || error.message?.includes('403')) {
+        continue;
       }
     }
   }
 
   return { 
     success: false, 
-    error: 'Incidencia técnica en el ejército de IA: Todos los modelos han agotado sus intentos o las credenciales están bloqueadas.',
-    isApiKeyError: lastError?.status === 403 || lastError?.message?.includes('leaked')
+    error: 'El ejército de IA ha agotado sus reservas de potencia o las llaves están bloqueadas.',
+    isApiKeyError: lastError?.status === 403 || lastError?.message?.includes('leaked') || lastError?.message?.includes('403')
   };
 }

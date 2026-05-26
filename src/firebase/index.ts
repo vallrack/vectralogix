@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Inicialización de Firebase con reglas de seguridad dinámicas.
- * Acceso total habilitado para colecciones: zones, routes, drivers, orders.
+ * TRIGGER: Despliegue de permisos totales para zones, routes, drivers y orders.
  */
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -25,6 +25,8 @@ export function initializeFirebase() {
   auth = getAuth(app);
   return { app, db, auth };
 }
+
+// Comentario para forzar despliegue de reglas: Operación 'Libertad Total' Activa.
 
 export * from './provider';
 export * from './client-provider';
