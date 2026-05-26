@@ -9,12 +9,13 @@ interface VectorMapProps {
   lng: number;
   zoom: number;
   plannedPoints?: any[];
+  zonePoints?: any[];
   zones?: any[];
   savedRoutes?: any[];
   containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], savedRoutes = [], containerRef }: VectorMapProps) {
+export function VectorMap({ lat, lng, zoom, plannedPoints = [], zonePoints = [], zones = [], savedRoutes = [], containerRef }: VectorMapProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
   const displayZoom = Math.round(zoom);
@@ -34,7 +35,6 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], save
   }, [containerRef]);
 
   const projectPoint = (pLat: number, pLng: number) => {
-    // Mercator approximation for visual overlays
     const worldSize = 256 * Math.pow(2, zoom);
     const lngScale = worldSize / 360;
     const latRad = lat * Math.PI / 180;
@@ -49,20 +49,23 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], save
     };
   };
 
-  const currentPathPoints = useMemo(() => {
+  const currentRoutePath = useMemo(() => {
     if (dimensions.width === 0) return [];
     return plannedPoints.map(p => projectPoint(p.lat, p.lng));
   }, [plannedPoints, lat, lng, zoom, dimensions]);
 
+  const currentZonePath = useMemo(() => {
+    if (dimensions.width === 0) return [];
+    return zonePoints.map(p => projectPoint(p.lat, p.lng));
+  }, [zonePoints, lat, lng, zoom, dimensions]);
+
   const projectedZones = useMemo(() => {
     if (dimensions.width === 0) return [];
     return (zones || []).map(zone => {
-      const center = zone.coordinates?.[0] || { lat, lng };
-      const projected = projectPoint(center.lat, center.lng);
+      const points = (zone.coordinates || []).map((c: any) => projectPoint(c.lat, c.lng));
       return {
         ...zone,
-        x: projected.x,
-        y: projected.y
+        points
       };
     });
   }, [zones, lat, lng, zoom, dimensions]);
@@ -102,19 +105,49 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], save
           {/* Zonas Proyectadas (Áreas) */}
           {projectedZones.map((zone) => {
             const baseSize = Math.pow(2, zoom - 14) * 40;
+            const points = zone.points;
+            
+            if (!points || points.length === 0) return null;
+
             return (
               <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.3 }}>
-                {zone.type === 'circle' ? (
-                  <circle cx={zone.x} cy={zone.y} r={baseSize * 4} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
+                {zone.type === 'polygon' && points.length > 2 ? (
+                  <path 
+                    d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} 
+                    fill={zone.color} 
+                    stroke={zone.color} 
+                    strokeWidth="3" 
+                    strokeDasharray="6,3" 
+                  />
                 ) : zone.type === 'rect' ? (
-                  <rect x={zone.x - baseSize * 5} y={zone.y - baseSize * 4} width={baseSize * 10} height={baseSize * 8} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
+                  <rect x={points[0].x - baseSize * 5} y={points[0].y - baseSize * 4} width={baseSize * 10} height={baseSize * 8} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
                 ) : (
-                  <path d={`M${zone.x},${zone.y - baseSize * 6} L${zone.x + baseSize * 7},${zone.y - baseSize} L${zone.x + baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 7},${zone.y - baseSize} Z`} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
+                  <circle cx={points[0].x} cy={points[0].y} r={baseSize * 4} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="6,3" />
                 )}
-                <text x={zone.x} y={zone.y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="900" className="uppercase tracking-widest drop-shadow-lg">{zone.name}</text>
+                <text x={points[0].x} y={points[0].y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="12" fontWeight="900" className="uppercase tracking-widest drop-shadow-lg">{zone.name}</text>
               </motion.g>
             );
           })}
+
+          {/* Zona en Trazado Actual */}
+          {currentZonePath.length > 0 && (
+            <g>
+              {currentZonePath.length > 2 ? (
+                <motion.path 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 0.4 }}
+                  d={`M ${currentZonePath.map(p => `${p.x},${p.y}`).join(' L ')} Z`} 
+                  fill="#2563eb"
+                  stroke="#2563eb"
+                  strokeWidth="2"
+                  strokeDasharray="4,4"
+                />
+              ) : null}
+              {currentZonePath.map((p, i) => (
+                <circle key={i} cx={p.x} cy={p.y} r="5" fill="#2563eb" stroke="white" strokeWidth="2" />
+              ))}
+            </g>
+          )}
 
           {/* Rutas Guardadas (Trayectorias) */}
           {projectedSavedRoutes.map((route) => (
@@ -136,11 +169,11 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], save
           ))}
 
           {/* Ruta Actual en Trazado */}
-          {currentPathPoints.length > 1 && (
+          {currentRoutePath.length > 1 && (
             <motion.path
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              d={`M ${currentPathPoints.map(p => `${p.x},${p.y}`).join(' L ')}`}
+              d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`}
               fill="none"
               stroke="#2563eb"
               strokeWidth="4"
@@ -149,7 +182,7 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], save
           )}
 
           {/* Nodos de la Ruta Actual */}
-          {currentPathPoints.map((point, i) => (
+          {currentRoutePath.map((point, i) => (
             <motion.g key={i} initial={{ scale: 0 }} animate={{ scale: 1 }}>
               <circle cx={point.x} cy={point.y} r="7" fill="#2563eb" stroke="white" strokeWidth="2" className="shadow-lg" />
               <text x={point.x + 10} y={point.y + 4} fill="#2563eb" fontSize="11" fontWeight="800" className="drop-shadow-md">N{i + 1}</text>

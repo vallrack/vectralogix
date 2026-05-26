@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { VectorMap } from '@/components/map/VectorMap';
 import { 
@@ -22,7 +22,8 @@ import {
   MapPinned,
   Route as RouteIcon,
   X,
-  Target
+  Target,
+  Pencil
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -66,6 +67,7 @@ export default function SpatialHub() {
   const [mapZoom, setMapZoom] = useState(14);
   const [viewCenter, setViewCenter] = useState({ lat: 4.6097, lng: -74.0817 });
   const [plannedPoints, setPlannedPoints] = useState<any[]>([]);
+  const [zonePoints, setZonePoints] = useState<any[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const firestore = useFirestore();
@@ -91,6 +93,12 @@ export default function SpatialHub() {
     };
   }, [zones, savedRoutes, searchQuery]);
 
+  // Reset drawing states when tab or tool changes
+  useEffect(() => {
+    setPlannedPoints([]);
+    setZonePoints([]);
+  }, [activeTab, activeTool]);
+
   const handleFocusPoint = (point: any) => {
     let targetLat = point.lat;
     let targetLng = point.lng;
@@ -108,6 +116,12 @@ export default function SpatialHub() {
     if (targetLat !== undefined && targetLng !== undefined) {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
+      
+      // Auto-fill name if searching for a city to delimit
+      if (activeTab === 'zonas' && !newZoneName) {
+        setNewZoneName(point.name || '');
+      }
+
       toast({
         title: "Enfoque Táctico",
         description: `Visualizando: ${point.name}`,
@@ -117,7 +131,7 @@ export default function SpatialHub() {
   };
 
   const handleMapClick = (e: React.MouseEvent) => {
-    if (activeTab !== 'rutas' || !mapContainerRef.current) return;
+    if (!mapContainerRef.current) return;
 
     const rect = mapContainerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -134,14 +148,22 @@ export default function SpatialHub() {
     const clickLng = viewCenter.lng + deltaX / lngScale;
     const clickLat = viewCenter.lat - deltaY / latScale;
 
-    const newPoint = {
-      id: Date.now(),
-      name: `Nodo ${plannedPoints.length + 1}`,
-      lat: clickLat,
-      lng: clickLng
-    };
-
-    setPlannedPoints([...plannedPoints, newPoint]);
+    if (activeTab === 'rutas') {
+      const newPoint = {
+        id: Date.now(),
+        name: `Nodo ${plannedPoints.length + 1}`,
+        lat: clickLat,
+        lng: clickLng
+      };
+      setPlannedPoints([...plannedPoints, newPoint]);
+    } else if (activeTab === 'zonas') {
+      const newPoint = {
+        id: Date.now(),
+        lat: clickLat,
+        lng: clickLng
+      };
+      setZonePoints([...zonePoints, newPoint]);
+    }
   };
 
   const handleSaveZone = () => {
@@ -152,11 +174,16 @@ export default function SpatialHub() {
     setIsSaving(true);
     const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
     
+    // If no points drawn, use map center
+    const finalCoordinates = zonePoints.length > 0 
+      ? zonePoints.map(p => ({ lat: p.lat, lng: p.lng }))
+      : [{ lat: viewCenter.lat, lng: viewCenter.lng }];
+
     const zoneData = {
       name: newZoneName,
       type: activeTool,
       color: colorHex,
-      coordinates: [{ lat: viewCenter.lat, lng: viewCenter.lng }],
+      coordinates: finalCoordinates,
       zoom: mapZoom,
       createdAt: serverTimestamp()
     };
@@ -165,6 +192,7 @@ export default function SpatialHub() {
       .then(() => {
         toast({ title: "Zona Guardada", description: "Perímetro registrado exitosamente." });
         setNewZoneName('');
+        setZonePoints([]);
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -266,7 +294,7 @@ export default function SpatialHub() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white relative">
-          {/* Resultados de Búsqueda (Sección Prioritaria) */}
+          {/* Resultados de Búsqueda */}
           <AnimatePresence>
             {searchQuery && (
               <motion.div 
@@ -298,8 +326,7 @@ export default function SpatialHub() {
             )}
           </AnimatePresence>
 
-          {/* Herramientas de la Pestaña Activa */}
-          <div className={cn("space-y-8 transition-opacity duration-300", searchQuery && "opacity-50")}>
+          <div className="space-y-8">
             {activeTab === 'zonas' && (
               <div className="space-y-8">
                 <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
@@ -341,6 +368,13 @@ export default function SpatialHub() {
                       <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
                       <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
                       <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
+                    </div>
+
+                    <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-center">
+                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Puntos Dibujados: {zonePoints.length}</p>
+                      {zonePoints.length > 0 && (
+                        <button onClick={() => setZonePoints([])} className="text-[8px] text-red-500 font-bold uppercase mt-1 hover:underline">Reiniciar Dibujo</button>
+                      )}
                     </div>
 
                     <button 
@@ -482,21 +516,27 @@ export default function SpatialHub() {
         ref={mapContainerRef}
         className={cn(
           "flex-1 relative bg-slate-100 overflow-hidden transition-all duration-500",
-          activeTab === 'rutas' ? "cursor-crosshair ring-inset ring-4 ring-primary/10" : "cursor-default"
+          "cursor-crosshair ring-inset ring-4 ring-primary/5"
         )}
-        onClick={handleMapClick}
       >
+        {/* Layer to capture clicks above the iframe */}
+        <div 
+          className="absolute inset-0 z-40 cursor-crosshair"
+          onClick={handleMapClick}
+        />
+
         <VectorMap 
           lat={viewCenter.lat} 
           lng={viewCenter.lng} 
           zoom={mapZoom} 
           plannedPoints={plannedPoints}
+          zonePoints={zonePoints}
           zones={zones}
           savedRoutes={savedRoutes}
           containerRef={mapContainerRef}
         />
         
-        <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-30">
+        <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-50">
           <button 
             onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))}
             className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg pointer-events-auto"
@@ -517,18 +557,16 @@ export default function SpatialHub() {
           </button>
         </div>
 
-        {activeTab === 'rutas' && (
-          <div className="absolute top-10 right-10 z-30 pointer-events-none">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-primary text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
-            >
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              MODO PLANEACIÓN ACTIVO
-            </motion.div>
-          </div>
-        )}
+        <div className="absolute top-10 right-10 z-50 pointer-events-none">
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-primary text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
+          >
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+            MODO DIBUJO ACTIVO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
+          </motion.div>
+        </div>
       </main>
     </div>
   );
