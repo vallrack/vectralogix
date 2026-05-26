@@ -23,7 +23,8 @@ import {
   Route as RouteIcon,
   X,
   Target,
-  Pencil
+  Pencil,
+  Locate
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -95,7 +96,6 @@ export default function SpatialHub() {
     };
   }, [zones, savedRoutes, searchQuery]);
 
-  // Reset drawing states when tab or tool changes
   useEffect(() => {
     setPlannedPoints([]);
     setZonePoints([]);
@@ -119,21 +119,30 @@ export default function SpatialHub() {
       setViewCenter({ lat: targetLat, lng: targetLng });
       setMapZoom(targetZoom);
       
-      // Sincronización proactiva: Si buscaste una ciudad, preparamos el formulario
       if (point.type === 'Ciudad' || point.type === 'Capital') {
         setNewZoneName(point.name);
-      } else {
-        // Si es una zona guardada, solo la visualizamos
-        if (activeTab === 'zonas') {
-          setNewZoneName(point.name || '');
-        }
+      } else if (activeTab === 'zonas') {
+        setNewZoneName(point.name || '');
       }
 
       toast({
-        title: "Objetivo Localizado",
-        description: `Enfocando: ${point.name}. Puedes empezar a delimitar.`,
+        title: "Ubicación Localizada",
+        description: `Enfocando: ${point.name}. Procede con la delimitación táctica.`,
       });
       setSearchQuery('');
+    }
+  };
+
+  const handleQuickSearch = () => {
+    if (!newZoneName) return;
+    const matched = COLOMBIA_DATABASE.find(c => c.name.toLowerCase().includes(newZoneName.toLowerCase()));
+    if (matched) {
+      handleFocusPoint(matched);
+    } else {
+      toast({
+        title: "Búsqueda Local",
+        description: `No encontramos "${newZoneName}" en la base rápida. Prueba el buscador superior.`,
+      });
     }
   };
 
@@ -179,7 +188,7 @@ export default function SpatialHub() {
       return;
     }
     if (zonePoints.length === 0) {
-      toast({ variant: "destructive", title: "Sin Geometría", description: "Haz clic en el mapa para delimitar el área primero." });
+      toast({ variant: "destructive", title: "Sin Datos", description: "Haz clic en el mapa para dibujar la zona." });
       return;
     }
 
@@ -196,7 +205,7 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'zones'), zoneData)
       .then(() => {
-        toast({ title: "Zona Registrada", description: `El área "${newZoneName}" está activa.` });
+        toast({ title: "Zona Registrada", description: `"${newZoneName}" guardada correctamente.` });
         setNewZoneName('');
         setZonePoints([]);
       })
@@ -215,8 +224,8 @@ export default function SpatialHub() {
     if (!firestore || !newRouteName || plannedPoints.length < 2) {
       toast({ 
         variant: "destructive", 
-        title: "Trazado Incompleto", 
-        description: "Necesitas al menos 2 nodos sobre el mapa." 
+        title: "Error", 
+        description: "Se requieren al menos 2 puntos en el mapa." 
       });
       return;
     }
@@ -230,7 +239,7 @@ export default function SpatialHub() {
 
     addDoc(collection(firestore, 'routes'), routeData)
       .then(() => {
-        toast({ title: "Planeación Guardada", description: "Trayectoria logística registrada exitosamente." });
+        toast({ title: "Ruta Guardada", description: "Planeación logística registrada." });
         setNewRouteName('');
         setPlannedPoints([]);
       })
@@ -265,16 +274,13 @@ export default function SpatialHub() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
-              placeholder="Buscar zonas, rutas o ciudades..." 
+              placeholder="Buscar ciudad, zona o ruta..." 
               className="w-full bg-white border border-slate-200 rounded-xl py-3.5 pl-12 pr-10 text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full text-slate-400"
-              >
+              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-full text-slate-400">
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
@@ -299,21 +305,20 @@ export default function SpatialHub() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white relative">
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar bg-white">
           <AnimatePresence>
             {searchQuery && (
               <motion.div 
-                key="search-results"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 className="space-y-4 mb-6 border-b border-slate-100 pb-6 overflow-hidden"
               >
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2 px-2">
-                  <Target className="w-3 h-3" />
-                  Resultados de Búsqueda
+                  <Locate className="w-3 h-3" />
+                  Resultados del Territorio
                 </h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar px-1">
+                <div className="space-y-2 max-h-60 overflow-y-auto px-1">
                   {searchResults?.mapPoints.map((point) => (
                     <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} />
                   ))}
@@ -323,214 +328,147 @@ export default function SpatialHub() {
                   {searchResults?.savedRoutes.map((point) => (
                     <SearchItem key={point.id} point={point} onClick={() => handleFocusPoint(point)} isSaved />
                   ))}
-                  {searchResults?.mapPoints.length === 0 && searchResults?.savedZones.length === 0 && searchResults?.savedRoutes.length === 0 && (
-                    <p className="text-[10px] text-slate-400 italic px-2">No se encontraron objetivos en el territorio.</p>
-                  )}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="space-y-8">
-            {activeTab === 'zonas' && (
-              <div className="space-y-8">
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <MousePointer2 className="w-3 h-3" />
-                    Delimitar Área
-                  </h3>
+          {activeTab === 'zonas' ? (
+            <div className="space-y-8">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Pencil className="w-3 h-3" />
+                  Delimitar Nueva Área
+                </h3>
 
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre de la Zona</label>
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nombre o Lugar</label>
+                    <div className="relative group">
                       <input 
                         type="text" 
-                        placeholder="Ej: Sector Norte A..."
-                        className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
+                        placeholder="Ej: Bello, Antioquia..."
+                        className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-4 pr-12 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
                         value={newZoneName}
                         onChange={(e) => setNewZoneName(e.target.value)}
                       />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color de Referencia</label>
-                      <div className="flex gap-3 justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                        {COLORS.map((color) => (
-                          <button
-                            key={color.id}
-                            onClick={() => setSelectedColor(color.id)}
-                            className={cn(
-                              "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-card",
-                              color.class,
-                              selectedColor === color.id ? "ring-2 ring-primary scale-110 shadow-md" : "opacity-40 hover:opacity-100"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
-                      <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="ÁREA" />
-                      <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
-                    </div>
-
-                    <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-center">
-                      <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Puntos Dibujados: {zonePoints.length}</p>
-                      {zonePoints.length > 0 && (
-                        <button onClick={() => setZonePoints([])} className="text-[8px] text-red-500 font-bold uppercase mt-1 hover:underline">REINICIAR DIBUJO</button>
-                      )}
-                    </div>
-
-                    <button 
-                      onClick={handleSaveZone}
-                      disabled={isSaving || !newZoneName || zonePoints.length === 0}
-                      className="w-full text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-                      style={{ backgroundColor: activeHexColor }}
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'GUARDANDO...' : 'REGISTRAR ZONA'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
-                    <List className="w-3 h-3" />
-                    Zonas Registradas ({zones?.length || 0})
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    {zonesLoading ? (
-                      <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
-                    ) : (
-                      zones?.map((zone) => (
-                        <div 
-                          key={zone.id} 
-                          onClick={() => handleFocusPoint(zone)}
-                          className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{zone.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{zone.type}</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (firestore) deleteDoc(doc(firestore, 'zones', zone.id));
-                            }} 
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'rutas' && (
-              <div className="space-y-8">
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                    <Navigation className="w-3 h-3" />
-                    Trazar Nueva Ruta
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    <p className="text-[10px] text-slate-500 italic mb-2">Haz clic sobre el mapa para marcar los nodos de entrega.</p>
-                    <input 
-                      type="text" 
-                      placeholder="Nombre de la ruta estratégica..."
-                      className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm"
-                      value={newRouteName}
-                      onChange={(e) => setNewRouteName(e.target.value)}
-                    />
-                    
-                    <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
-                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos Marcados: {plannedPoints.length}</span>
                       <button 
-                        onClick={() => setPlannedPoints([])}
-                        className="text-[9px] font-bold text-red-500 uppercase hover:underline"
+                        onClick={handleQuickSearch}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-primary transition-colors"
+                        title="Buscar en el mapa"
                       >
-                        Limpiar Mapa
+                        <Search className="w-4 h-4" />
                       </button>
                     </div>
-
-                    <button 
-                      onClick={handleSaveRoute}
-                      disabled={isSaving || !newRouteName || plannedPoints.length < 2}
-                      className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" />
-                      {isSaving ? 'GUARDANDO...' : 'GUARDAR PLANEACIÓN'}
-                    </button>
                   </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
-                    <RouteIcon className="w-3 h-3" />
-                    Planeaciones Activas ({savedRoutes?.length || 0})
-                  </h3>
                   
                   <div className="space-y-2">
-                    {routesLoading ? (
-                      <div className="py-12 flex justify-center"><RefreshCw className="w-8 h-8 animate-spin text-primary/30" /></div>
-                    ) : (
-                      savedRoutes?.map((route) => (
-                        <div 
-                          key={route.id} 
-                          onClick={() => handleFocusPoint(route)}
-                          className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                              <RouteIcon className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{route.name}</p>
-                              <p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Nodos</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (firestore) deleteDoc(doc(firestore, 'routes', route.id));
-                            }} 
-                            className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))
-                    )}
+                    <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Color Táctico</label>
+                    <div className="flex gap-3 justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                      {COLORS.map((color) => (
+                        <button
+                          key={color.id}
+                          onClick={() => setSelectedColor(color.id)}
+                          className={cn(
+                            "w-7 h-7 rounded-full transition-all ring-offset-2 ring-offset-card",
+                            color.class,
+                            selectedColor === color.id ? "ring-2 ring-primary scale-110 shadow-md" : "opacity-40 hover:opacity-100"
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <ToolButton active={activeTool === 'polygon'} onClick={() => setActiveTool('polygon')} icon={Hexagon} label="POLÍGONO" />
+                    <ToolButton active={activeTool === 'rect'} onClick={() => setActiveTool('rect')} icon={Square} label="CUADRO" />
+                    <ToolButton active={activeTool === 'circle'} onClick={() => setActiveTool('circle')} icon={Circle} label="RADIO" />
+                  </div>
+
+                  <div className="p-3 bg-primary/5 border border-primary/10 rounded-xl text-center space-y-1">
+                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tight">Vértices Marcados: {zonePoints.length}</p>
+                    <p className="text-[8px] text-slate-400 leading-tight">Haz clic sobre el mapa para delimitar.</p>
+                  </div>
+
+                  <button 
+                    onClick={handleSaveZone}
+                    disabled={isSaving || !newZoneName || zonePoints.length === 0}
+                    className="w-full text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                    style={{ backgroundColor: activeHexColor }}
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSaving ? 'GUARDANDO...' : 'REGISTRAR ZONA'}
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
+                  <List className="w-3 h-3" />
+                  Zonas Guardadas ({zones?.length || 0})
+                </h3>
+                <div className="space-y-2">
+                  {zones?.map((zone) => (
+                    <div key={zone.id} onClick={() => handleFocusPoint(zone)} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-10 rounded-full" style={{ backgroundColor: zone.color }} />
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">{zone.name}</p>
+                          <p className="text-[9px] text-slate-400 uppercase tracking-widest">{zone.type}</p>
+                        </div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); if (firestore) deleteDoc(doc(firestore, 'zones', zone.id)); }} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="bg-slate-50 border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Navigation className="w-3 h-3" />
+                  Trazar Nueva Ruta
+                </h3>
+                <div className="space-y-4">
+                  <input type="text" placeholder="Nombre de la ruta estratégica..." className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all shadow-sm" value={newRouteName} onChange={(e) => setNewRouteName(e.target.value)} />
+                  <div className="flex items-center justify-between p-3 bg-primary/5 rounded-xl border border-primary/10">
+                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight">Nodos: {plannedPoints.length}</span>
+                    <button onClick={() => setPlannedPoints([])} className="text-[9px] font-bold text-red-500 uppercase hover:underline">Limpiar</button>
+                  </div>
+                  <button onClick={handleSaveRoute} disabled={isSaving || !newRouteName || plannedPoints.length < 2} className="w-full bg-primary text-white py-4 rounded-xl text-xs font-bold flex items-center justify-center gap-3 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 disabled:opacity-50">
+                    <Save className="w-4 h-4" />
+                    GUARDAR RUTA
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2 px-2">
+                  <RouteIcon className="w-3 h-3" />
+                  Rutas Activas ({savedRoutes?.length || 0})
+                </h3>
+                <div className="space-y-2">
+                  {savedRoutes?.map((route) => (
+                    <div key={route.id} onClick={() => handleFocusPoint(route)} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-primary/30 hover:bg-slate-50 transition-all group cursor-pointer shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><RouteIcon className="w-4 h-4" /></div>
+                        <div><p className="text-xs font-bold text-slate-800">{route.name}</p><p className="text-[9px] text-slate-400 uppercase tracking-widest">{route.stops?.length || 0} Nodos</p></div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); if (firestore) deleteDoc(doc(firestore, 'routes', route.id)); }} className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-50 rounded-lg text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
       
-      <main 
-        ref={mapContainerRef}
-        className={cn(
-          "flex-1 relative bg-slate-100 overflow-hidden transition-all duration-500",
-          "cursor-crosshair ring-inset ring-4 ring-primary/5"
-        )}
-      >
-        {/* Capa de captura de clics tácticos */}
-        <div 
-          className="absolute inset-0 z-40 cursor-crosshair"
-          onClick={handleMapClick}
-        />
-
+      <main ref={mapContainerRef} className="flex-1 relative bg-slate-100 overflow-hidden transition-all duration-500 cursor-crosshair ring-inset ring-4 ring-primary/5">
+        <div className="absolute inset-0 z-40 cursor-crosshair" onClick={handleMapClick} />
         <VectorMap 
           lat={viewCenter.lat} 
           lng={viewCenter.lng} 
@@ -544,35 +482,15 @@ export default function SpatialHub() {
         />
         
         <div className="absolute bottom-10 right-10 flex flex-col gap-3 z-50">
-          <button 
-            onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))}
-            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg pointer-events-auto"
-          >
-            +
-          </button>
-          <button 
-            onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))}
-            className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl transition-all font-bold text-lg pointer-events-auto"
-          >
-            -
-          </button>
-          <button 
-            onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }}
-            className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all pointer-events-auto"
-          >
-            <Crosshair className="w-5 h-5" />
-          </button>
+          <button onClick={() => setMapZoom(prev => Math.min(prev + 1, 21))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl font-bold text-lg">+</button>
+          <button onClick={() => setMapZoom(prev => Math.max(prev - 1, 5))} className="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-600 hover:bg-slate-50 shadow-xl font-bold text-lg">-</button>
+          <button onClick={() => { setViewCenter({ lat: 4.6097, lng: -74.0817 }); setMapZoom(12); }} className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center shadow-xl shadow-primary/30 hover:scale-105 transition-all"><Crosshair className="w-5 h-5" /></button>
         </div>
 
-        <div className="absolute top-10 right-10 z-50 pointer-events-none">
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs"
-            style={{ backgroundColor: activeHexColor }}
-          >
+        <div className="absolute top-10 right-10 z-50">
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 font-bold text-xs" style={{ backgroundColor: activeHexColor }}>
             <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            MODO DIBUJO: {activeTab === 'rutas' ? 'PLANEACIÓN' : 'DELIMITACIÓN'}
+            MODO: {activeTab === 'rutas' ? 'TRAZADO' : 'DELIMITACIÓN'}
           </motion.div>
         </div>
       </main>
@@ -598,9 +516,7 @@ function SearchItem({ point, onClick, isSaved = false }: any) {
         </div>
         <div>
           <p className="text-xs font-bold text-slate-800">{point.name}</p>
-          <p className="text-[9px] text-slate-400 uppercase tracking-widest">
-            {isSaved ? (point.stops ? 'Planeación' : 'Zona Táctica') : (point.type || 'Ubicación')}
-          </p>
+          <p className="text-[9px] text-slate-400 uppercase tracking-widest">{isSaved ? (point.stops ? 'Ruta' : 'Zona') : (point.type || 'Lugar')}</p>
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors" />
