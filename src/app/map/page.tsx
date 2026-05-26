@@ -16,7 +16,8 @@ import {
   Navigation,
   ZoomIn,
   MapPin,
-  Trash2
+  Trash2,
+  Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,10 +49,19 @@ export default function SpatialHub() {
   const [activeTool, setActiveTool] = useState('polygon');
   const [isSaving, setIsSaving] = useState(false);
   const [newZoneName, setNewZoneName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const firestore = useFirestore();
   const zonesQuery = useMemo(() => firestore ? collection(firestore, 'zones') : null, [firestore]);
   const { data: zones, loading: zonesLoading } = useCollection(zonesQuery);
+
+  const filteredZones = useMemo(() => {
+    if (!zones) return [];
+    return zones.filter(zone => 
+      zone.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      zone.type.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [zones, searchQuery]);
 
   const handleSaveZone = () => {
     if (!firestore || !newZoneName) {
@@ -67,7 +77,7 @@ export default function SpatialHub() {
       type: activeTool,
       color: colorHex,
       coordinates: [
-        { lat: 4.6097, lng: -74.0817 }, // Coordenadas simuladas para el ejemplo
+        { lat: 4.6097, lng: -74.0817 }, 
       ],
       createdAt: serverTimestamp()
     };
@@ -76,6 +86,7 @@ export default function SpatialHub() {
       .then(() => {
         toast({ title: "Éxito", description: "Zona guardada correctamente." });
         setNewZoneName('');
+        setActiveTab('zonas');
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -91,6 +102,7 @@ export default function SpatialHub() {
   const handleDeleteZone = (id: string) => {
     if (!firestore) return;
     deleteDoc(doc(firestore, 'zones', id))
+      .then(() => toast({ title: "Eliminado", description: "La zona ha sido removida." }))
       .catch(async () => {
         const permissionError = new FirestorePermissionError({
           path: `zones/${id}`,
@@ -100,12 +112,20 @@ export default function SpatialHub() {
       });
   };
 
+  const handleZoomToZone = (zone: any) => {
+    toast({ 
+      title: `Enfocando: ${zone.name}`, 
+      description: `Analizando entorno en coordenadas ${zone.type}...` 
+    });
+    // Aquí se dispararía la lógica de cámara del mapa
+  };
+
   return (
     <div className="flex h-screen bg-[#0A0C10] text-foreground overflow-hidden">
       <AppSidebar />
       
       {/* Sidebar de Mapa */}
-      <aside className="w-[380px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20 shadow-2xl">
+      <aside className="w-[380px] min-w-[380px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20 shadow-2xl relative">
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center font-bold text-sm shadow-lg shadow-primary/20">
@@ -142,6 +162,7 @@ export default function SpatialHub() {
           <AnimatePresence mode="wait">
             {activeTab === 'zonas' && (
               <motion.div 
+                key="zonas"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -205,7 +226,7 @@ export default function SpatialHub() {
                     ) : (
                       zones?.map((zone) => (
                         <div key={zone.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl hover:border-white/10 transition-all group">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleZoomToZone(zone)}>
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: zone.color }} />
                             <div>
                               <p className="text-xs font-bold">{zone.name}</p>
@@ -213,7 +234,7 @@ export default function SpatialHub() {
                             </div>
                           </div>
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button className="p-1.5 hover:bg-primary/20 rounded-md text-primary" title="Zoom">
+                            <button onClick={() => handleZoomToZone(zone)} className="p-1.5 hover:bg-primary/20 rounded-md text-primary" title="Zoom">
                               <ZoomIn className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => handleDeleteZone(zone.id)} className="p-1.5 hover:bg-rose-500/20 rounded-md text-rose-500" title="Eliminar">
@@ -228,8 +249,64 @@ export default function SpatialHub() {
               </motion.div>
             )}
 
+            {activeTab === 'buscar' && (
+              <motion.div 
+                key="buscar"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="relative group">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <input 
+                    type="text" 
+                    placeholder="Filtrar por nombre o tipo..." 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">RESULTADOS ({filteredZones.length})</h3>
+                    <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {filteredZones.length === 0 ? (
+                      <div className="py-20 text-center">
+                        <Search className="w-8 h-8 text-white/5 mx-auto mb-3" />
+                        <p className="text-[11px] text-muted-foreground">No se encontraron coincidencias.</p>
+                      </div>
+                    ) : (
+                      filteredZones.map((zone) => (
+                        <div key={zone.id} 
+                          onClick={() => handleZoomToZone(zone)}
+                          className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-primary/30 transition-all cursor-pointer group shadow-sm"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-background border border-white/5 flex items-center justify-center">
+                              <MapPin className="w-4 h-4" style={{ color: zone.color }} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold">{zone.name}</p>
+                              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {activeTab === 'rutas' && (
               <motion.div 
+                key="rutas"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -260,11 +337,11 @@ export default function SpatialHub() {
       </aside>
       
       {/* Área del Mapa */}
-      <main className="flex-1 relative">
+      <main className="flex-1 relative bg-black">
         <VectorMap />
         
         {/* Controles del Mapa Flotantes */}
-        <div className="absolute top-6 right-6 flex flex-col gap-3">
+        <div className="absolute top-6 right-6 flex flex-col gap-3 z-30">
           <div className="bg-[#0E1117] border border-white/10 rounded-xl overflow-hidden flex flex-col shadow-2xl">
             <button className="p-3.5 hover:bg-white/5 border-b border-white/10 text-sm font-bold transition-colors">+</button>
             <button className="p-3.5 hover:bg-white/5 text-sm font-bold transition-colors">−</button>
@@ -275,7 +352,7 @@ export default function SpatialHub() {
         </div>
 
         {/* Overlay de Coordenadas */}
-        <div className="absolute bottom-6 left-6 bg-[#0E1117]/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-mono text-muted-foreground">
+        <div className="absolute bottom-6 left-6 bg-[#0E1117]/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2.5 text-[10px] font-mono text-muted-foreground z-30">
           LAT: 4.609712 | LNG: -74.081745 | ZOOM: 12.5x
         </div>
       </main>
