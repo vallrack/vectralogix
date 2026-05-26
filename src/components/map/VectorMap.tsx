@@ -10,13 +10,13 @@ interface VectorMapProps {
   zoom: number;
   plannedPoints?: any[];
   zones?: any[];
+  savedRoutes?: any[];
   containerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], containerRef }: VectorMapProps) {
+export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], savedRoutes = [], containerRef }: VectorMapProps) {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
-  // Usamos un zoom redondeado para que el iframe de Google Maps responda correctamente
   const displayZoom = Math.round(zoom);
   const mapUrl = `https://maps.google.com/maps?q=${lat},${lng}&z=${displayZoom}&hl=es&output=embed&iwloc=near`;
 
@@ -33,7 +33,6 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
     return () => window.removeEventListener('resize', updateSize);
   }, [containerRef]);
 
-  // Función de proyección precisa basada en píxeles de pantalla y zoom
   const projectPoint = (pLat: number, pLng: number) => {
     const worldSize = 256 * Math.pow(2, zoom);
     const lngScale = worldSize / 360;
@@ -49,7 +48,7 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
     };
   };
 
-  const pathPoints = useMemo(() => {
+  const currentPathPoints = useMemo(() => {
     if (dimensions.width === 0) return [];
     return plannedPoints.map(p => projectPoint(p.lat, p.lng));
   }, [plannedPoints, lat, lng, zoom, dimensions]);
@@ -65,11 +64,19 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
     });
   }, [zones, lat, lng, zoom, dimensions]);
 
+  const projectedSavedRoutes = useMemo(() => {
+    if (dimensions.width === 0) return [];
+    return (savedRoutes || []).map(route => ({
+      ...route,
+      points: (route.stops || []).map((s: any) => projectPoint(s.lat, s.lng))
+    }));
+  }, [savedRoutes, lat, lng, zoom, dimensions]);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-white select-none pointer-events-none">
       <div className="absolute inset-0 grayscale-[0.1] contrast-[1.05] opacity-80">
         <iframe
-          key={`${lat}-${lng}-${displayZoom}`} // Forzamos recarga del iframe al cambiar posición clave
+          key={`${lat}-${lng}-${displayZoom}`}
           src={mapUrl}
           width="100%"
           height="100%"
@@ -89,21 +96,11 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
-          <pattern id="grid" width="80" height="80" patternUnits="userSpaceOnUse">
-            <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#2563eb" strokeWidth="0.5" opacity="0.05" />
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-
-          {/* Zonas Proyectadas con Escala Dinámica */}
-          {projectedZones.map((zone, i) => {
+          {/* Zonas Proyectadas */}
+          {projectedZones.map((zone) => {
             const baseSize = Math.pow(2, zoom - 12) * 20;
             return (
-              <motion.g 
-                key={zone.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 0.25, scale: 1 }}
-                transition={{ duration: 0.8 }}
-              >
+              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.25 }}>
                 {zone.type === 'circle' ? (
                   <circle cx={zone.x} cy={zone.y} r={baseSize * 5} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="4,2" />
                 ) : zone.type === 'rect' ? (
@@ -111,44 +108,52 @@ export function VectorMap({ lat, lng, zoom, plannedPoints = [], zones = [], cont
                 ) : (
                   <path d={`M${zone.x},${zone.y - baseSize * 6} L${zone.x + baseSize * 7},${zone.y - baseSize} L${zone.x + baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 4},${zone.y + baseSize * 6} L${zone.x - baseSize * 7},${zone.y - baseSize} Z`} fill={zone.color} stroke={zone.color} strokeWidth="2" strokeDasharray="4,2" />
                 )}
-                <text x={zone.x} y={zone.y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="800" opacity="1" className="uppercase tracking-widest drop-shadow-md">{zone.name}</text>
+                <text x={zone.x} y={zone.y - (baseSize * 7)} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="800" className="uppercase tracking-widest drop-shadow-md">{zone.name}</text>
               </motion.g>
             );
           })}
 
-          {/* Rutas con Líneas de Telemetría */}
-          {pathPoints.length > 1 && (
+          {/* Rutas Guardadas */}
+          {projectedSavedRoutes.map((route) => (
+            <g key={route.id} className="opacity-40">
+              <path
+                d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`}
+                fill="none"
+                stroke="#94a3b8"
+                strokeWidth="2"
+                strokeDasharray="4,4"
+              />
+              {route.points.map((p: any, i: number) => (
+                <circle key={i} cx={p.x} cy={p.y} r="3" fill="#94a3b8" />
+              ))}
+            </g>
+          ))}
+
+          {/* Ruta Actual en Trazado */}
+          {currentPathPoints.length > 1 && (
             <motion.path
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 1.2, ease: "linear" }}
-              d={`M ${pathPoints.map(p => `${p.x},${p.y}`).join(' L ')}`}
+              d={`M ${currentPathPoints.map(p => `${p.x},${p.y}`).join(' L ')}`}
               fill="none"
               stroke="#2563eb"
-              strokeWidth="2.5"
+              strokeWidth="3"
               strokeDasharray="8,4"
-              opacity="0.6"
             />
           )}
 
-          {/* Nodos Estratégicos */}
-          {pathPoints.map((point, i) => (
-            <motion.g 
-              key={i}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: i * 0.05 }}
-            >
-              <circle cx={point.x} cy={point.y} r="12" fill="#2563eb" opacity="0.1" />
-              <circle cx={point.x} cy={point.y} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
-              <text x={point.x + 8} y={point.y + 4} fill="#2563eb" fontSize="9" fontWeight="bold" className="drop-shadow-sm">N{i + 1}</text>
+          {/* Nodos de la Ruta Actual */}
+          {currentPathPoints.map((point, i) => (
+            <motion.g key={i} initial={{ scale: 0 }} animate={{ scale: 1 }}>
+              <circle cx={point.x} cy={point.y} r="5" fill="#2563eb" stroke="white" strokeWidth="2" />
+              <text x={point.x + 8} y={point.y + 4} fill="#2563eb" fontSize="10" fontWeight="bold" className="drop-shadow-sm">N{i + 1}</text>
             </motion.g>
           ))}
         </svg>
 
-        {/* Mira Central de Referencia */}
+        {/* Mira Central */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-20">
-          <div className="w-40 h-40 border border-primary/40 rounded-full flex items-center justify-center">
+          <div className="w-20 h-20 border border-primary/40 rounded-full flex items-center justify-center">
             <div className="w-1.5 h-1.5 bg-primary rounded-full shadow-lg" />
             <div className="absolute w-full h-[1px] bg-primary/30" />
             <div className="absolute h-full w-[1px] bg-primary/30" />
