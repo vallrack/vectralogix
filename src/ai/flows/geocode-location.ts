@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Motor de geocodificación de alta disponibilidad con Ejército de IA Redundante.
+ * @fileOverview Motor de geocodificación resiliente con Ejército de IA Redundante.
  */
 
 import {ai} from '@/ai/genkit';
