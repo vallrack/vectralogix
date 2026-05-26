@@ -18,7 +18,7 @@ Para subir este proyecto a tu repositorio de GitHub, abre una terminal en la ra√
 ```bash
 git init
 git add .
-git commit -m "feat: Initial commit for VectraLogix Hub"
+git commit -m "feat: Initial commit for VectraLogix Hub - Full Security & AI Army"
 git branch -M main
 git remote add origin https://github.com/vallrack/vectralogix.git
 git push -u origin main
