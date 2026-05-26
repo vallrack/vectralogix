@@ -18,7 +18,8 @@ import {
   MapPin,
   Trash2,
   Filter,
-  Maximize2
+  Maximize2,
+  Navigation2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -44,6 +45,18 @@ const COLORS = [
   { id: 'pink', class: 'bg-pink-500', hex: '#ec4899' },
 ];
 
+// Base de datos de búsqueda para simular geocodificación en Colombia
+const MOCK_COLOMBIA_LOCATIONS = [
+  { name: 'Bello', lat: 6.3373, lng: -75.5579, type: 'Ciudad', color: '#3b82f6' },
+  { name: 'Medellín', lat: 6.2442, lng: -75.5812, type: 'Ciudad', color: '#10b981' },
+  { name: 'Bogotá', lat: 4.6097, lng: -74.0817, type: 'Capital', color: '#f43f5e' },
+  { name: 'Cali', lat: 3.4516, lng: -76.5320, type: 'Ciudad', color: '#f59e0b' },
+  { name: 'Barranquilla', lat: 10.9639, lng: -74.7964, type: 'Ciudad', color: '#8b5cf6' },
+  { name: 'Cartagena', lat: 10.3910, lng: -75.4794, type: 'Ciudad', color: '#ec4899' },
+  { name: 'Pereira', lat: 4.8133, lng: -75.6961, type: 'Ciudad', color: '#3b82f6' },
+  { name: 'Bucaramanga', lat: 7.1193, lng: -73.1227, type: 'Ciudad', color: '#10b981' },
+];
+
 export default function SpatialHub() {
   const [activeTab, setActiveTab] = useState('zonas');
   const [selectedColor, setSelectedColor] = useState('blue');
@@ -52,17 +65,21 @@ export default function SpatialHub() {
   const [newZoneName, setNewZoneName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [mapZoom, setMapZoom] = useState(12.5);
+  const [viewCenter, setViewCenter] = useState({ lat: 4.6097, lng: -74.0817 });
 
   const firestore = useFirestore();
   const zonesQuery = useMemo(() => firestore ? collection(firestore, 'zones') : null, [firestore]);
   const { data: zones, loading: zonesLoading } = useCollection(zonesQuery);
 
-  const filteredZones = useMemo(() => {
-    if (!zones) return [];
-    return zones.filter(zone => 
-      zone.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      zone.type.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  // Filtrado de Zonas guardadas y Localizaciones de Colombia
+  const searchResults = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return { saved: zones || [], mapPoints: [] };
+
+    const saved = (zones || []).filter(z => z.name.toLowerCase().includes(query));
+    const mapPoints = MOCK_COLOMBIA_LOCATIONS.filter(l => l.name.toLowerCase().includes(query));
+    
+    return { saved, mapPoints };
   }, [zones, searchQuery]);
 
   const handleSaveZone = () => {
@@ -74,13 +91,12 @@ export default function SpatialHub() {
     setIsSaving(true);
     const colorHex = COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6';
     
-    // Coordenadas simuladas en Bogotá para el ejemplo
     const zoneData = {
       name: newZoneName,
       type: activeTool,
       color: colorHex,
       coordinates: [
-        { lat: 4.6097 + (Math.random() - 0.5) * 0.1, lng: -74.0817 + (Math.random() - 0.5) * 0.1 }, 
+        { lat: viewCenter.lat + (Math.random() - 0.5) * 0.05, lng: viewCenter.lng + (Math.random() - 0.5) * 0.05 }, 
       ],
       createdAt: serverTimestamp()
     };
@@ -116,20 +132,23 @@ export default function SpatialHub() {
       });
   };
 
-  const handleZoomToZone = (zone: any) => {
+  const handleFocusPoint = (point: any) => {
     toast({ 
-      title: `Analizando: ${zone.name}`, 
-      description: `Enfocando entorno en ${zone.name}...` 
+      title: `Analizando: ${point.name}`, 
+      description: `Enfocando entorno en ${point.name} (Colombia)...` 
     });
     setMapZoom(15);
-    // En una implementación real con Map SDK, usaríamos map.flyTo()
+    // En una app real, actualizaríamos el estado del mapa
+    if (point.lat && point.lng) {
+      setViewCenter({ lat: point.lat, lng: point.lng });
+    }
   };
 
   return (
     <div className="flex h-screen bg-[#0A0C10] text-foreground overflow-hidden">
       <AppSidebar />
       
-      {/* Sidebar de Mapa - Panel de Control Izquierdo */}
+      {/* Sidebar de Mapa */}
       <aside className="w-[380px] min-w-[380px] bg-[#0E1117] border-r border-white/5 flex flex-col z-20 shadow-2xl relative">
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -235,7 +254,7 @@ export default function SpatialHub() {
                       zones?.map((zone) => (
                         <div 
                           key={zone.id} 
-                          onClick={() => handleZoomToZone(zone)}
+                          onClick={() => handleFocusPoint(zone)}
                           className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 hover:border-primary/30 transition-all group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
@@ -271,29 +290,49 @@ export default function SpatialHub() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Filtrar zonas por nombre..." 
+                    placeholder="Buscar zonas o localizaciones en Colombia..." 
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs focus:ring-1 focus:ring-primary outline-none transition-all"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">RESULTADOS ({filteredZones.length})</h3>
-                    <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                  
+                <div className="space-y-6">
+                  {searchResults.mapPoints.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">MAPA (COLOMBIA)</h3>
+                      {searchResults.mapPoints.map((point) => (
+                        <div 
+                          key={point.name}
+                          onClick={() => handleFocusPoint(point)}
+                          className="flex items-center justify-between p-4 bg-accent/5 border border-accent/10 rounded-2xl hover:bg-accent/10 transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center">
+                              <Navigation2 className="w-4 h-4 text-accent" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold">{point.name}</p>
+                              <p className="text-[9px] text-muted-foreground uppercase">{point.type}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="space-y-3">
-                    {filteredZones.length === 0 ? (
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">ZONAS GUARDADAS</h3>
+                    {searchResults.saved.length === 0 && searchResults.mapPoints.length === 0 ? (
                       <div className="py-20 text-center bg-white/5 border border-dashed border-white/10 rounded-2xl">
                         <Search className="w-8 h-8 text-white/5 mx-auto mb-3" />
-                        <p className="text-[11px] text-muted-foreground">No se encontraron coincidencias.</p>
+                        <p className="text-[11px] text-muted-foreground">No se encontraron resultados para "{searchQuery}".</p>
                       </div>
                     ) : (
-                      filteredZones.map((zone) => (
+                      searchResults.saved.map((zone) => (
                         <div key={zone.id} 
-                          onClick={() => handleZoomToZone(zone)}
+                          onClick={() => handleFocusPoint(zone)}
                           className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 hover:border-primary/30 transition-all cursor-pointer group shadow-sm"
                         >
                           <div className="flex items-center gap-4">
@@ -305,7 +344,7 @@ export default function SpatialHub() {
                               <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{zone.type}</p>
                             </div>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
                         </div>
                       ))
                     )}
@@ -350,53 +389,51 @@ export default function SpatialHub() {
       <main className="flex-1 relative bg-black overflow-hidden">
         <VectorMap />
         
-        {/* Capa de Marcadores Visuales (Simulación sobre el mapa) */}
+        {/* Marcadores Visuales en el Mapa */}
         <div className="absolute inset-0 pointer-events-none z-20">
-          {filteredZones.map((zone: any) => (
-            <motion.div
-              key={zone.id}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="absolute"
-              // Simulación de posicionamiento basado en coordenadas ficticias para el demo
-              style={{ 
-                left: `${50 + (zone.coordinates?.[0]?.lng + 74.0817) * 500}%`, 
-                top: `${40 - (zone.coordinates?.[0]?.lat - 4.6097) * 500}%` 
-              }}
-            >
-              <div className="relative flex flex-col items-center group pointer-events-auto cursor-pointer" onClick={() => handleZoomToZone(zone)}>
-                <div className="bg-background/90 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-2xl">
-                   <p className="text-[9px] font-bold whitespace-nowrap">{zone.name}</p>
-                </div>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg animate-bounce" style={{ backgroundColor: zone.color }}>
-                  <MapPin className="w-3 h-3 text-white" />
-                </div>
-                <div className="w-10 h-10 absolute -inset-2 rounded-full border border-white/10 animate-ping opacity-20" style={{ borderColor: zone.color }} />
-              </div>
-            </motion.div>
+          {/* Marcadores de Zonas Guardadas */}
+          {searchResults.saved.map((zone: any) => (
+            <MapMarker 
+              key={zone.id} 
+              point={zone} 
+              onFocus={() => handleFocusPoint(zone)} 
+            />
+          ))}
+
+          {/* Marcadores de Localizaciones Geográficas (Colombia) */}
+          {searchResults.mapPoints.map((point: any) => (
+            <MapMarker 
+              key={point.name} 
+              point={point} 
+              onFocus={() => handleFocusPoint(point)}
+              isPointOfInterest
+            />
           ))}
         </div>
 
         {/* Buscador Inteligente Flotante en el Mapa */}
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4">
-           <div className="bg-[#0E1117]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-1 shadow-2xl flex items-center gap-2 group focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+           <div className="bg-[#0E1117]/90 backdrop-blur-xl border border-white/10 rounded-2xl p-1 shadow-2xl flex items-center gap-2 group focus-within:ring-2 focus-within:ring-primary/50 transition-all">
               <div className="p-2 bg-primary/10 rounded-xl text-primary">
                 <Search className="w-4 h-4" />
               </div>
               <input 
                 type="text" 
-                placeholder="Buscar ubicación o zona en tiempo real..."
+                placeholder="Buscar ciudad o zona (ej. Bello, Medellín...)"
                 className="bg-transparent border-none outline-none text-xs flex-1 text-white placeholder:text-muted-foreground py-2"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <button className="p-2 hover:bg-white/5 rounded-xl text-muted-foreground">
-                <Filter className="w-4 h-4" />
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="p-2 hover:bg-white/5 rounded-xl text-muted-foreground"
+              >
+                <RefreshCw className="w-4 h-4" />
               </button>
            </div>
         </div>
         
-        {/* Controles del Mapa Flotantes Derecha */}
+        {/* Controles del Mapa Flotantes */}
         <div className="absolute top-6 right-6 flex flex-col gap-3 z-30">
           <div className="bg-[#0E1117] border border-white/10 rounded-xl overflow-hidden flex flex-col shadow-2xl">
             <button 
@@ -413,12 +450,12 @@ export default function SpatialHub() {
           </button>
         </div>
 
-        {/* Overlay de Coordenadas y Estado del Motor */}
+        {/* Overlay de Coordenadas y Estado */}
         <div className="absolute bottom-6 left-6 flex items-end gap-4 z-30">
           <div className="bg-[#0E1117]/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-[10px] font-mono text-muted-foreground shadow-2xl">
             <div className="flex gap-4 mb-1">
-              <span>LAT: 4.609712</span>
-              <span>LNG: -74.081745</span>
+              <span>LAT: {viewCenter.lat.toFixed(6)}</span>
+              <span>LNG: {viewCenter.lng.toFixed(6)}</span>
             </div>
             <div className="flex items-center gap-2">
                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
@@ -428,6 +465,48 @@ export default function SpatialHub() {
         </div>
       </main>
     </div>
+  );
+}
+
+function MapMarker({ point, onFocus, isPointOfInterest }: any) {
+  // Simulación de posición lat/lng a coordenadas de pantalla relativa (%)
+  // Bogotá (4.6, -74.0) Medellín (6.2, -75.5) Bello (6.3, -75.5)
+  const latFactor = (point.lat || point.coordinates?.[0]?.lat || 4.6) - 4.6;
+  const lngFactor = (point.lng || point.coordinates?.[0]?.lng || -74.0) + 74.0;
+  
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="absolute"
+      style={{ 
+        left: `${50 + lngFactor * 500}%`, 
+        top: `${50 - latFactor * 500}%` 
+      }}
+    >
+      <div 
+        className="relative flex flex-col items-center group pointer-events-auto cursor-pointer" 
+        onClick={onFocus}
+      >
+        <div className="bg-background/90 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl mb-1 opacity-0 group-hover:opacity-100 transition-all shadow-2xl -translate-y-2">
+           <p className="text-[9px] font-bold whitespace-nowrap">{point.name}</p>
+           {isPointOfInterest && <p className="text-[7px] text-accent uppercase font-bold">Localización</p>}
+        </div>
+        <div 
+          className={cn(
+            "w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-125",
+            isPointOfInterest ? "bg-accent animate-pulse" : "animate-bounce"
+          )} 
+          style={{ backgroundColor: !isPointOfInterest ? point.color : undefined }}
+        >
+          {isPointOfInterest ? <Navigation2 className="w-3 h-3 text-white fill-white" /> : <MapPin className="w-3 h-3 text-white" />}
+        </div>
+        <div 
+          className="w-10 h-10 absolute -inset-2 rounded-full border border-white/10 animate-ping opacity-20" 
+          style={{ borderColor: point.color || '#0EA5E9' }} 
+        />
+      </div>
+    </motion.div>
   );
 }
 
