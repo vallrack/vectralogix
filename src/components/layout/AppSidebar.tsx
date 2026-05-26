@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import Link from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
@@ -15,18 +14,17 @@ import {
   Command,
   ChevronRight,
   ChevronLeft,
-  Menu
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 const NAV_ITEMS = [
-  { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
+  { label: 'Visión General', icon: LayoutDashboard, href: '/dashboard' },
   { label: 'Spatial Hub', icon: MapIcon, href: '/map' },
-  { label: 'Auto-Routes', icon: Route, href: '/routes' },
-  { label: 'Fleet Control', icon: Users, href: '/fleet' },
-  { label: 'Operational Hub', icon: Package, href: '/orders' },
-  { label: 'Analytics', icon: BarChart3, href: '/analytics' },
+  { label: 'Auto-Rutas', icon: Route, href: '/routes' },
+  { label: 'Control de Flota', icon: Users, href: '/fleet' },
+  { label: 'Pedidos', icon: Package, href: '/orders' },
+  { label: 'Analíticas', icon: BarChart3, href: '/analytics' },
 ];
 
 export function AppSidebar() {
@@ -35,32 +33,29 @@ export function AppSidebar() {
 
   return (
     <div className={cn(
-      "h-screen border-r border-white/5 flex flex-col bg-background/95 backdrop-blur-md z-50 transition-all duration-300 relative",
+      "h-screen border-r border-slate-200 flex flex-col bg-white z-50 transition-all duration-300 relative shadow-sm",
       isCollapsed ? "w-20" : "w-64"
     )}>
-      {/* Toggle Button */}
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white shadow-lg z-[60] hover:scale-110 transition-transform"
+        className="absolute -right-3 top-24 w-6 h-6 bg-white border border-slate-200 rounded-full flex items-center justify-center text-slate-400 shadow-md z-[60] hover:text-primary transition-colors"
       >
         {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
 
-      {/* Brand Header */}
-      <div className={cn("p-6 flex items-center gap-3 transition-all", isCollapsed ? "justify-center px-2" : "")}>
-        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-primary flex items-center justify-center neon-glow">
-          <Command className="w-6 h-6 text-white" />
+      <div className={cn("p-6 flex items-center gap-3", isCollapsed ? "justify-center px-2" : "")}>
+        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-primary flex items-center justify-center text-white neon-glow">
+          <Command className="w-6 h-6" />
         </div>
         {!isCollapsed && (
           <div className="overflow-hidden whitespace-nowrap">
-            <h1 className="text-lg font-headline font-bold tracking-tight text-foreground">VECTRA</h1>
-            <p className="text-[10px] text-primary font-bold tracking-[0.2em] -mt-1 uppercase">Logix Engine</p>
+            <h1 className="text-lg font-headline font-bold tracking-tight text-slate-900">VECTRA</h1>
+            <p className="text-[10px] text-primary font-bold tracking-[0.2em] -mt-1 uppercase">Logistics Hub</p>
           </div>
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-4 py-4 space-y-1 overflow-hidden">
+      <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -71,14 +66,14 @@ export function AppSidebar() {
                 "group flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200",
                 isActive 
                   ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
                 isCollapsed ? "justify-center px-0" : ""
               )}
               title={isCollapsed ? item.label : ""}
             >
               <div className="flex items-center gap-3">
                 <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-primary" : "")} />
-                {!isCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                {!isCollapsed && <span className="text-sm font-semibold">{item.label}</span>}
               </div>
               {isActive && !isCollapsed && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
             </Link>
@@ -86,35 +81,29 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Footer Tools */}
-      {!isCollapsed && (
-        <div className="p-4 mt-auto">
-          <div className="glass-panel p-4 rounded-2xl mb-4">
+      <div className="p-4 mt-auto">
+        {!isCollapsed && (
+          <div className="bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">System Load</span>
-              <span className="text-[10px] font-bold text-green-500 uppercase">Stable</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Estado Sistema</span>
+              <span className="text-[10px] font-bold text-emerald-500 uppercase">Óptimo</span>
             </div>
-            <div className="w-full bg-white/5 h-1 rounded-full overflow-hidden">
-              <div className="w-2/3 h-full bg-primary" />
+            <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+              <div className="w-[85%] h-full bg-primary rounded-full" />
             </div>
           </div>
+        )}
 
-          <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors">
-            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">Admin Mode</span>
-            <ChevronRight className="w-4 h-4 ml-auto text-muted-foreground/50" />
+        <div className={cn(
+          "flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors border border-transparent hover:border-slate-100",
+          isCollapsed ? "justify-center" : ""
+        )}>
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+            <Settings className="w-4 h-4 text-slate-500" />
           </div>
+          {!isCollapsed && <span className="text-sm font-semibold text-slate-600">Configuración</span>}
         </div>
-      )}
-      {isCollapsed && (
-        <div className="p-4 mt-auto flex flex-col items-center gap-4">
-          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-            <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

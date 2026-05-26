@@ -1,32 +1,31 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 220 30% 6%;
-    --foreground: 210 40% 98%;
-    --card: 220 30% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 220 30% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
+    --background: 210 20% 98%;
+    --foreground: 220 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 15%;
+    --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 220 30% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 30% 12%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 199 84% 55%;
+    --secondary: 210 20% 92%;
+    --secondary-foreground: 220 30% 15%;
+    --muted: 210 20% 92%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 199 89% 48%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 30% 15%;
-    --input: 220 30% 15%;
-    --ring: 217 91% 60%;
-    --radius: 0.75rem;
-    --chart-1: 217 91% 60%;
-    --chart-2: 199 84% 55%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 1rem;
+    --chart-1: 221 83% 53%;
+    --chart-2: 199 89% 48%;
     --chart-3: 162 97% 48%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
@@ -46,13 +45,26 @@
 }
 
 .glass-panel {
-  @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+  @apply bg-white border border-slate-200 shadow-sm transition-all duration-300;
+}
+
+.glass-panel:hover {
+  @apply shadow-md border-primary/20;
 }
 
 .neon-glow {
-  box-shadow: 0 0 15px rgba(56, 122, 245, 0.3);
+  box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.2);
 }
 
-.map-gradient-overlay {
-  background: linear-gradient(to bottom, rgba(14, 16, 20, 0.8) 0%, rgba(14, 16, 20, 0) 15%, rgba(14, 16, 20, 0) 85%, rgba(14, 16, 20, 0.8) 100%);
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-300;
 }
