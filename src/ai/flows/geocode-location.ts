@@ -2,6 +2,7 @@
 'use server';
 /**
  * @fileOverview A Genkit flow for geocoding locations and landmarks in Colombia.
+ * Handles AI-based coordinate lookup with error resilience for API configuration issues.
  */
 
 import {ai} from '@/ai/genkit';
@@ -47,8 +48,22 @@ const geocodeLocationFlow = ai.defineFlow(
     outputSchema: GeocodeOutputSchema,
   },
   async (input) => {
-    const { output } = await geocodePrompt(input);
-    return output!;
+    try {
+      const { output } = await geocodePrompt(input);
+      if (!output) {
+        throw new Error('La IA no pudo procesar la ubicación geográfica.');
+      }
+      return output;
+    } catch (error: any) {
+      console.error('Error in geocodeLocationFlow:', error);
+      
+      // Capturamos específicamente el error de API Key filtrada o inválida
+      if (error.message?.includes('leaked') || error.message?.includes('API key') || error.status === 403) {
+        throw new Error('Error de configuración: El acceso al servicio de mapas inteligente (Gemini API) está bloqueado por seguridad (Llave reportada como filtrada).');
+      }
+      
+      throw new Error('No se pudo encontrar la ubicación. Intenta con una descripción más específica o verifica tu conexión.');
+    }
   }
 );
 
