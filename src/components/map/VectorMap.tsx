@@ -96,27 +96,27 @@ export function VectorMap({
           height={dimensions.height}
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
         >
-          {/* Zonas Guardadas */}
+          {/* Zonas Guardadas (Capa de Fondo) */}
           {projectedZones.map((zone) => {
             const points = zone.points;
             if (!points || points.length === 0) return null;
             return (
-              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.4 }}>
+              <motion.g key={zone.id} initial={{ opacity: 0 }} animate={{ opacity: 0.25 }}>
                 {zone.type === 'polygon' && points.length > 2 ? (
                   <path d={`M ${points.map((p: any) => `${p.x},${p.y}`).join(' L ')} Z`} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
                 ) : zone.type === 'rect' ? (
-                  <rect x={points[0].x - 40} y={points[0].y - 30} width={80} height={60} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
+                  <rect x={points[0].x - 60} y={points[0].y - 45} width={120} height={90} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
                 ) : (
-                  <circle cx={points[0].x} cy={points[0].y} r={50} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
+                  <circle cx={points[0].x} cy={points[0].y} r={80} fill={zone.color} stroke={zone.color} strokeWidth="3" strokeDasharray="8,4" />
                 )}
-                <text x={points[0].x} y={points[0].y - 20} textAnchor="middle" fill={zone.color} fontSize="11" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)]">
+                <text x={points[0].x} y={points[0].y - 30} textAnchor="middle" fill={zone.color} fontSize="10" fontWeight="900" className="uppercase tracking-widest drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
                   {zone.name}
                 </text>
               </motion.g>
             );
           })}
 
-          {/* Zona en Trazado */}
+          {/* Zona en Edición */}
           {currentZonePath.length > 0 && (
             <g>
               {currentZonePath.length > 2 ? (
@@ -132,29 +132,34 @@ export function VectorMap({
 
           {/* Rutas Guardadas */}
           {projectedSavedRoutes.map((route) => (
-            <g key={route.id} className="opacity-50">
-              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#475569" strokeWidth="3" strokeDasharray="6,6" />
+            <g key={route.id} className="opacity-40">
+              <path d={`M ${route.points.map((p: any) => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#475569" strokeWidth="4" strokeDasharray="10,5" />
               {route.points.map((p: any, i: number) => (
-                <circle key={i} cx={p.x} cy={p.y} r="5" fill="#475569" stroke="white" strokeWidth="2" />
+                <circle key={i} cx={p.x} cy={p.y} r="4" fill="#475569" stroke="white" strokeWidth="2" />
               ))}
             </g>
           ))}
 
-          {/* Ruta en Trazado */}
-          {currentRoutePath.length > 1 && (
-            <path d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="5" strokeDasharray="12,6" />
-          )}
-          {currentRoutePath.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="8" fill="#2563eb" stroke="white" strokeWidth="3" />
-              <text x={p.x + 12} y={p.y + 4} fill="#2563eb" fontSize="12" fontWeight="900">P{i + 1}</text>
+          {/* Ruta en Edición */}
+          {currentRoutePath.length > 0 && (
+            <g>
+              {currentRoutePath.length > 1 && (
+                <path d={`M ${currentRoutePath.map(p => `${p.x},${p.y}`).join(' L ')}`} fill="none" stroke="#2563eb" strokeWidth="6" strokeDasharray="15,8" />
+              )}
+              {currentRoutePath.map((p, i) => (
+                <g key={i}>
+                  <circle cx={p.x} cy={p.y} r="9" fill="#2563eb" stroke="white" strokeWidth="3" />
+                  <text x={p.x + 14} y={p.y + 5} fill="#2563eb" fontSize="11" fontWeight="900" className="drop-shadow-md">P{i + 1}</text>
+                </g>
+              ))}
             </g>
-          ))}
+          )}
         </svg>
 
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-30">
-          <div className="w-28 h-28 border-2 border-primary/30 rounded-full flex items-center justify-center">
-            <div className="w-2.5 h-2.5 bg-primary rounded-full shadow-[0_0_20px_rgba(37,99,235,1)]" />
+        {/* Mira Telescópica Central */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 opacity-20">
+          <div className="w-40 h-40 border border-primary/20 rounded-full flex items-center justify-center">
+            <div className="w-1 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(37,99,235,1)]" />
           </div>
         </div>
       </div>
