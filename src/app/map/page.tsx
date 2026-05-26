@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
@@ -20,7 +19,8 @@ import {
   Pencil,
   Eraser,
   Loader2,
-  Hand
+  Hand,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +64,7 @@ export default function SpatialHub() {
 
   const firestore = useFirestore();
   
+  // Consultas simplificadas para evitar errores de índices en el prototipo
   const zonesQuery = useMemo(() => firestore ? query(collection(firestore, 'zones')) : null, [firestore]);
   const routesQuery = useMemo(() => firestore ? query(collection(firestore, 'routes')) : null, [firestore]);
   
@@ -72,6 +73,7 @@ export default function SpatialHub() {
 
   const activeHexColor = useMemo(() => COLORS.find(c => c.id === selectedColor)?.hex || '#3b82f6', [selectedColor]);
 
+  // Manejo de navegación manual sincronizada
   const handleMouseDown = (e: React.MouseEvent) => {
     if (activeTool === 'navigate') {
       setIsPanning(true);
@@ -130,7 +132,7 @@ export default function SpatialHub() {
       } else {
         toast({ 
           variant: "destructive", 
-          title: "Error de Localización", 
+          title: response.isApiKeyError ? "Error de Seguridad" : "Error de Localización", 
           description: response.error || "No se pudo encontrar la ubicación solicitada." 
         });
       }
@@ -186,7 +188,7 @@ export default function SpatialHub() {
     setIsSaving(true);
     const zoneData = {
       name: newZoneName,
-      type: activeTool === 'navigate' ? 'polygon' : activeTool,
+      type: 'polygon',
       color: activeHexColor,
       coordinates: zonePoints.map(p => ({ lat: p.lat, lng: p.lng })),
       zoom: mapZoom,
@@ -197,7 +199,7 @@ export default function SpatialHub() {
       .then(() => {
         toast({ 
           title: "Zona Registrada", 
-          description: `"${newZoneName}" guardada. El mapa se centrará en la nueva zona.`,
+          description: `"${newZoneName}" guardada. El mapa se centrará para inspección táctica.`,
           action: (
             <ToastAction altText="Trazar Ruta" onClick={() => { 
               setActiveTab('rutas'); 
@@ -211,7 +213,7 @@ export default function SpatialHub() {
           )
         });
         
-        // Zoom automático a la zona
+        // Zoom automático a la zona guardada
         if (zonePoints.length > 0) {
           setMapZoom(16);
           setViewCenter({ lat: zonePoints[0].lat, lng: zonePoints[0].lng });
@@ -382,11 +384,9 @@ export default function SpatialHub() {
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5">
-                    <ToolButton active={activeTool === 'navigate'} onClick={() => { setActiveTool('navigate'); setIsDrawing(false); }} icon={Hand} label="NAV" />
-                    <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setIsDrawing(true); }} icon={Hexagon} label="POL" />
-                    <ToolButton active={activeTool === 'rect'} onClick={() => { setActiveTool('rect'); setIsDrawing(true); }} icon={Square} label="REC" />
-                    <ToolButton active={activeTool === 'circle'} onClick={() => { setActiveTool('circle'); setIsDrawing(true); }} icon={Circle} label="RAD" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <ToolButton active={activeTool === 'navigate'} onClick={() => { setActiveTool('navigate'); setIsDrawing(false); }} icon={Hand} label="NAVEGAR" />
+                    <ToolButton active={activeTool === 'polygon'} onClick={() => { setActiveTool('polygon'); setIsDrawing(true); }} icon={Hexagon} label="DIBUJAR" />
                   </div>
 
                   <div className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl">

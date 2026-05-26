@@ -1,8 +1,7 @@
-
 'use server';
 /**
  * @fileOverview A Genkit flow for geocoding locations and landmarks in Colombia.
- * Handles AI-based coordinate lookup with multi-model redundancy for high availability.
+ * Handles AI-based coordinate lookup with multi-model redundancy (2.5 Flash -> 1.5 Flash -> 1.5 Pro).
  */
 
 import {ai} from '@/ai/genkit';
@@ -27,6 +26,7 @@ export type GeocodeResponse = {
   success: boolean;
   data?: GeocodeOutput;
   error?: string;
+  isApiKeyError?: boolean;
 };
 
 const geocodePrompt = ai.definePrompt({
@@ -54,26 +54,37 @@ const geocodeLocationFlow = ai.defineFlow(
     outputSchema: GeocodeOutputSchema,
   },
   async (input) => {
-    try {
-      // Intento Primario: Gemini 2.5 Flash
-      const { output } = await geocodePrompt(input, {
-        model: 'googleai/gemini-2.5-flash',
-      });
-      if (!output) throw new Error('Empty output from primary model');
-      return output;
-    } catch (error) {
-      console.warn('Primary geocode model failed, scaling to redundant model...', error);
+    const models = [
+      'googleai/gemini-2.5-flash',
+      'googleai/gemini-1.5-flash',
+      'googleai/gemini-1.5-pro'
+    ];
+
+    let lastError: any = null;
+
+    for (const model of models) {
       try {
-        // Intento de Respaldo: Gemini 1.5 Pro
         const { output } = await geocodePrompt(input, {
-          model: 'googleai/gemini-1.5-pro',
+          model: model as any,
         });
-        if (!output) throw new Error('Empty output from redundant model');
-        return output;
-      } catch (fallbackError) {
-        throw new Error('La inteligencia geográfica no está disponible en este momento por fallos en los modelos de lenguaje de Google.');
+        if (output) return output;
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`Model ${model} failed, trying next...`, error.message);
+        
+        // Si es un error de API Key filtrada, el resto de modelos de Google probablemente también fallen,
+        // pero intentamos por si el usuario tiene diferentes cuotas o configuraciones.
+        if (error.message?.includes('leaked') || error.status === 403) {
+          continue;
+        }
       }
     }
+
+    if (lastError?.message?.includes('leaked') || lastError?.status === 403) {
+      throw new Error('API_KEY_LEAKED');
+    }
+
+    throw new Error('SERVICE_UNAVAILABLE');
   }
 );
 
@@ -84,17 +95,17 @@ export async function geocodeLocation(input: GeocodeInput): Promise<GeocodeRespo
   } catch (error: any) {
     console.error('All geocode models failed:', error);
     
-    // Capturamos específicamente fallos de API Key o seguridad
-    if (error.message?.includes('leaked') || error.message?.includes('API key') || error.status === 403) {
+    if (error.message === 'API_KEY_LEAKED') {
       return { 
         success: false, 
-        error: 'Incidencia de seguridad detectada en la API Key de Google. El servicio está en modo degradado. Contacte a soporte técnico.' 
+        isApiKeyError: true,
+        error: 'Incidencia de seguridad: La API Key de Google ha sido revocada por filtración. El servicio de IA está suspendido hasta actualizar la credencial.' 
       };
     }
     
     return { 
       success: false, 
-      error: error.message || 'No se pudo localizar el punto exacto. Prueba con una dirección más completa.' 
+      error: 'La inteligencia geográfica no está disponible en este momento por fallos en los modelos de lenguaje de Google.' 
     };
   }
 }
