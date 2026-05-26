@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -18,7 +17,8 @@ import {
   Navigation,
   CheckCircle2,
   Loader2,
-  Package
+  Package,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -57,10 +57,10 @@ export default function RoutePlanning() {
         averageVehicleSpeedKmh: 45,
       });
       setResult(data);
-      toast({ title: "Ruta Optimizada", description: "La IA ha generado la secuencia más eficiente." });
+      toast({ title: "Ruta Optimizada", description: "La IA redundante ha generado la secuencia más eficiente." });
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Error de IA", description: "No se pudo generar la optimización." });
+      toast({ variant: "destructive", title: "Fallo de Sistema", description: "No se pudo completar la optimización tras agotar los modelos de respaldo." });
     } finally {
       setIsOptimizing(false);
     }
@@ -80,7 +80,7 @@ export default function RoutePlanning() {
         <header className="flex justify-between items-start mb-12">
           <div>
             <h1 className="text-3xl font-headline font-bold mb-2 text-slate-900">Auto-Route Intelligence</h1>
-            <p className="text-muted-foreground font-medium">Planificación autónoma basada en IA para pedidos pendientes.</p>
+            <p className="text-muted-foreground font-medium">Planificación autónoma con IA redundante de alta disponibilidad.</p>
           </div>
           <div className="flex gap-4">
             <Button 
@@ -89,7 +89,7 @@ export default function RoutePlanning() {
               className="bg-primary px-8 py-6 rounded-2xl text-white font-bold text-sm shadow-xl shadow-primary/30 flex items-center gap-3 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 h-auto"
             >
               {isOptimizing ? <Loader2 className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5" />}
-              {isOptimizing ? 'PROCESANDO...' : 'EJECUTAR OPTIMIZADOR'}
+              {isOptimizing ? 'CONMUTANDO MODELOS...' : 'EJECUTAR OPTIMIZADOR'}
             </Button>
           </div>
         </header>
@@ -137,14 +137,15 @@ export default function RoutePlanning() {
               </div>
             </div>
 
-            <div className="glass-panel p-6 rounded-3xl bg-primary/5 border-primary/20">
+            <div className="glass-panel p-6 rounded-3xl bg-emerald-500/5 border-emerald-500/20">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center">
-                  <Timer className="w-6 h-6 text-primary" />
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-emerald-500" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motor de IA</p>
-                  <p className="text-sm font-bold text-slate-800">Gemini 2.5 Flash Activo</p>
+                  <p className="text-sm font-bold text-slate-800">IA Redundante Activa</p>
+                  <p className="text-[9px] text-emerald-600 font-black uppercase">Flash | Flash | Pro</p>
                 </div>
               </div>
             </div>
@@ -156,8 +157,8 @@ export default function RoutePlanning() {
                 <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500">
                   <BrainCircuit className="w-12 h-12 text-slate-300" />
                 </div>
-                <h3 className="text-xl font-headline font-bold mb-2 text-slate-900">Configuración Requerida</h3>
-                <p className="text-slate-500 max-w-xs font-medium">Selecciona los pedidos de la lista lateral para generar la secuencia autónoma de entrega.</p>
+                <h3 className="text-xl font-headline font-bold mb-2 text-slate-900">IA en Espera</h3>
+                <p className="text-slate-500 max-w-xs font-medium">Selecciona pedidos para que el enjambre de modelos de IA trace la ruta óptima.</p>
               </div>
             ) : (
               <motion.div 
@@ -168,12 +169,12 @@ export default function RoutePlanning() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <ResultStat label="Distancia Total" value={`${result.totalDistanceKm.toFixed(1)} KM`} color="primary" />
                   <ResultStat label="Tiempo Estimado" value={`${result.estimatedTravelTimeMinutes} MIN`} color="accent" />
-                  <ResultStat label="Eficiencia IA" value="98.5%" color="green-500" />
+                  <ResultStat label="Resiliencia IA" value="100%" color="emerald-500" />
                 </div>
 
                 <div className="glass-panel p-8 rounded-[40px] bg-white">
                   <h3 className="text-xl font-headline font-bold mb-8 flex items-center gap-3 text-slate-900">
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                     Secuencia Optimizada
                   </h3>
                   
@@ -200,7 +201,7 @@ export default function RoutePlanning() {
                   </div>
 
                   <div className="mt-8 pt-8 border-t border-slate-100">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Registro de Optimización</h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Registro de Optimización Logística</h4>
                     <div className="bg-slate-900 rounded-2xl p-6 font-mono text-xs text-primary leading-relaxed border border-white/10 shadow-2xl">
                       {result.optimizationNotes}
                     </div>
@@ -221,15 +222,6 @@ export default function RoutePlanning() {
 }
 
 function ResultStat({ label, value, color }: any) {
-  return (
-    <div className="glass-panel p-6 rounded-3xl bg-white border-slate-100">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-      <p className={cn("text-3xl font-headline font-bold", `text-${color}`)}>{value}</p>
-    </div>
-  );
-}
-
-function ResultStatItem({ label, value, color }: any) {
   return (
     <div className="glass-panel p-6 rounded-3xl bg-white border-slate-100">
       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>

@@ -1,7 +1,7 @@
-
 'use server';
 /**
- * @fileOverview A Genkit flow for generating optimized delivery routes with resilience.
+ * @fileOverview A Genkit flow for generating optimized delivery routes with high-availability redundancy.
+ * Iterates through multiple Gemini models to ensure service continuity.
  */
 
 import {ai} from '@/ai/genkit';
@@ -55,8 +55,7 @@ Input Details:
 - Vehicle Capacity: {{vehicleCapacity}} units
 - Average Speed: {{averageVehicleSpeedKmh}} km/h
 
-The sequence must start and end at the start location.
-`,
+The sequence must start and end at the start location. Ensure the output is a valid sequence of stops.`,
 });
 
 const optimizedDeliveryRouteGenerationFlow = ai.defineFlow(
@@ -66,28 +65,32 @@ const optimizedDeliveryRouteGenerationFlow = ai.defineFlow(
     outputSchema: OptimizedDeliveryRouteGenerationOutputSchema,
   },
   async (input) => {
-    try {
-      // Intentamos con Gemini 2.5 Flash
-      const { output } = await optimizeRoutePrompt(input, {
-        model: 'googleai/gemini-2.5-flash',
-      });
-      return output!;
-    } catch (error) {
-      console.error('Gemini primary route optimization failed, falling back to Pro model...', error);
+    const models = [
+      'googleai/gemini-2.5-flash',
+      'googleai/gemini-1.5-flash',
+      'googleai/gemini-1.5-pro'
+    ];
+
+    let lastError: any = null;
+
+    for (const model of models) {
       try {
-        // Fallback a Gemini 1.5 Pro
         const { output } = await optimizeRoutePrompt(input, {
-          model: 'googleai/gemini-1.5-pro',
+          model: model as any,
         });
-        return {
-          ...output!,
-          optimizationNotes: output!.optimizationNotes + "\n\n(Generado vía sistema de respaldo por alta demanda)",
-        };
-      } catch (fallbackError) {
-        console.error('All AI models failed for route optimization', fallbackError);
-        throw new Error('El sistema de optimización de rutas no está disponible. Inténtalo de nuevo más tarde.');
+        if (output) {
+          const notes = model.includes('pro') 
+            ? `${output.optimizationNotes}\n\n(Optimizado vía sistema de redundancia de alta capacidad)` 
+            : output.optimizationNotes;
+          return { ...output, optimizationNotes: notes };
+        }
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`Route optimization model ${model} failed, trying next...`, error.message);
       }
     }
+
+    throw new Error(lastError?.message || 'Sistema de optimización de rutas no disponible tras agotar modelos de respaldo.');
   }
 );
 

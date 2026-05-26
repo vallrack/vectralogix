@@ -1,9 +1,8 @@
-
 {
   "entities": {
     "Zone": {
       "title": "Zona Geográfica",
-      "description": "Representa una zona delimitada en el mapa por el usuario con su nivel de detalle.",
+      "description": "Representa una zona delimitada en el mapa por el usuario. Permitir total libertad de lectura/escritura a operadores.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -18,7 +17,7 @@
     },
     "Route": {
       "title": "Ruta de Entrega",
-      "description": "Una secuencia de puntos trazada para una entrega.",
+      "description": "Una secuencia de puntos optimizada por IA. Libertad de gestión total para operadores.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -32,7 +31,7 @@
     },
     "Driver": {
       "title": "Conductor de Flota",
-      "description": "Información del operador y su vehículo.",
+      "description": "Personal operativo con acceso irrestricto de gestión.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -47,7 +46,7 @@
     },
     "Order": {
       "title": "Pedido Logístico",
-      "description": "Detalles del envío y destino.",
+      "description": "Envío operativo gestionable con libertad total por cualquier operador autenticado.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -67,19 +66,19 @@
   "firestore": {
     "/zones/{zoneId}": {
       "schema": "#/backend/entities/Zone",
-      "description": "Zonas de cobertura. Permitir lectura/escritura a usuarios autenticados."
+      "description": "Zonas de cobertura táctica. Acceso total de lectura/escritura para usuarios autenticados."
     },
     "/routes/{routeId}": {
       "schema": "#/backend/entities/Route",
-      "description": "Rutas optimizadas. Permitir lectura/escritura a usuarios autenticados."
+      "description": "Planeación logística por IA. Acceso total de lectura/escritura para usuarios autenticados."
     },
     "/drivers/{driverId}": {
       "schema": "#/backend/entities/Driver",
-      "description": "Personal de flota. Permitir lectura/escritura a usuarios autenticados."
+      "description": "Gestión de flota. Acceso total de lectura/escritura para usuarios autenticados."
     },
     "/orders/{orderId}": {
       "schema": "#/backend/entities/Order",
-      "description": "Pedidos operativos. Permitir lectura/escritura a usuarios autenticados."
+      "description": "Pedidos en curso. Acceso total de lectura/escritura para usuarios autenticados."
     }
   }
 }

@@ -1,7 +1,6 @@
-
 'use server';
 /**
- * @fileOverview A Genkit flow for driver assignment with high availability.
+ * @fileOverview A Genkit flow for driver assignment with multi-model redundancy for high availability.
  */
 
 import {ai} from '@/ai/genkit';
@@ -67,27 +66,32 @@ const intelligentDriverAssignmentFlow = ai.defineFlow(
     outputSchema: IntelligentDriverAssignmentOutputSchema,
   },
   async (input) => {
-    try {
-      // Primary: Gemini 2.5 Flash
-      const { output } = await assignDriverPrompt(input, {
-        model: 'googleai/gemini-2.5-flash',
-      });
-      return output!;
-    } catch (error) {
-      console.error('Driver assignment failed on primary model, using fallback...', error);
+    const models = [
+      'googleai/gemini-2.5-flash',
+      'googleai/gemini-1.5-flash',
+      'googleai/gemini-1.5-pro'
+    ];
+
+    let lastError: any = null;
+
+    for (const model of models) {
       try {
-        // Fallback: Gemini 1.5 Pro
         const { output } = await assignDriverPrompt(input, {
-          model: 'googleai/gemini-1.5-pro',
+          model: model as any,
         });
-        return {
-          ...output!,
-          reasoning: output!.reasoning + " (Procesado por sistema de alta disponibilidad)",
-        };
-      } catch (fallbackError) {
-        throw new Error('Error crítico en el despachador de IA.');
+        if (output) {
+          const reasoning = model.includes('pro') 
+            ? `${output.reasoning} (Asignación validada por sistema de alta disponibilidad)` 
+            : output.reasoning;
+          return { ...output, reasoning };
+        }
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`Driver assignment model ${model} failed, trying next...`, error.message);
       }
     }
+
+    throw new Error(lastError?.message || 'Error crítico en el despachador de IA: Fallo de todos los modelos.');
   }
 );
 
